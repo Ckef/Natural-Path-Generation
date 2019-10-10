@@ -4,6 +4,7 @@
 
 help:
 	@echo ""
+	@echo "Currently OpenGL 4.2 is hardcoded."
 	@echo "Dependencies that need to be installed:"
 	@echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 	@echo "xorg-dev"
@@ -27,7 +28,7 @@ OUT  = obj
 CC   = gcc
 
 # Flags for all binaries
-CFLAGS = -Wall -Wsign-compare -pedantic -Iinclude
+CFLAGS = -Wall -Wsign-compare -Iinclude -Idepend
 
 # Flags for object files only
 OFLAGS = $(CFLAGS) -c -s
@@ -61,7 +62,12 @@ HEADERS = \
  include/output.h
 
 OBJS = \
+ $(OUT)/glad.o \
  $(OUT)/output.o
+
+# Dependencies
+$(OUT)/glad.o: depend/glad/glad.c | $(OUT)
+	$(CC) $(OFLAGS) $< -o $@
 
 # Object files
 $(OUT)/%.o: src/%.c $(HEADERS) | $(OUT)

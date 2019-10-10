@@ -57,10 +57,16 @@ clean-all: clean
 ###############################
 # Builds
 
+HEADERS = \
+ include/output.h
+
+OBJS = \
+ $(OUT)/output.o
+
 # Object files
 $(OUT)/%.o: src/%.c $(HEADERS) | $(OUT)
-	@$(CC) $(OFLAGS) $< -o $@
+	$(CC) $(OFLAGS) $< -o $@
 
 # Main binary
-main: src/main.c | $(BIN)
-	@$(CC) $(CFLAGS) $< $(OBJS) -o $(BIN)/main $(LFLAGS)
+main: src/main.c $(OBJS) | $(BIN)
+	$(CC) $(CFLAGS) $< $(OBJS) -o $(BIN)/$@ $(LFLAGS)

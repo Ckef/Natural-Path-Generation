@@ -1,0 +1,20 @@
+# filetypes
+*.cachefile
+*.cbp
+*.cbTemp
+*.csproj*
+*.Debug*
+*.depend
+*.fuse_hidden*
+*.layout
+*.npp
+*.suo
+*.supp
+*.swo
+*.swp
+*.temp
+*~
+
+# directories
+*bin/
+*obj/

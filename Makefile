@@ -4,6 +4,12 @@
 
 help:
 	@echo ""
+	@echo "Dependencies that need to be installed:"
+	@echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+	@echo "xorg-dev"
+	@echo "libgl1-mesa-dev"
+	@echo "GLFW3 (build and install from source)"
+	@echo ""
 	@echo "Available commands:"
 	@echo "~~~~~~~~~~~~~~~~~~~"
 	@echo "$(MAKE) clean      Clean temporary files."
@@ -25,6 +31,9 @@ CFLAGS = -Wall -Wsign-compare -pedantic -Iinclude
 
 # Flags for object files only
 OFLAGS = $(CFLAGS) -c -s
+
+# Linker flags
+LFLAGS = -lglfw3 -lX11 -lGL -pthread -lm -ldl
 
 
 ###############################
@@ -54,4 +63,4 @@ $(OUT)/%.o: src/%.c $(HEADERS) | $(OUT)
 
 # Main binary
 main: src/main.c | $(BIN)
-	@$(CC) $(CFLAGS) $< $(OBJS) -o $(BIN)/main
+	@$(CC) $(CFLAGS) $< $(OBJS) -o $(BIN)/main $(LFLAGS)

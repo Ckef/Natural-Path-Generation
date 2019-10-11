@@ -1,16 +1,10 @@
 
-#define GLFW_INCLUDE_GLCOREARB
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
+/* Main header includes */
+#include <include.h>
 
+#include <input.h>
 #include <output.h>
 #include <stdio.h>
-
-/*****************************/
-void error_callback(int error, const char* description)
-{
-	throw_error(description);
-}
 
 /*****************************/
 int main(int argc, char* argv[])
@@ -28,7 +22,7 @@ int main(int argc, char* argv[])
 	/* Create a window */
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-	GLFWwindow* win = glfwCreateWindow(640, 480, "Terrainz", NULL, NULL);
+	GLFWwindow* win = glfwCreateWindow(900, 500, "Terrainz", NULL, NULL);
 
 	if(!win)
 	{
@@ -36,15 +30,29 @@ int main(int argc, char* argv[])
 		goto terminate;
 	}
 
-	/* Load context */
+	output("GLFW opened a window succesfully.");
+
+	/* Load OpenGL context */
 	glfwMakeContextCurrent(win);
 	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+	
+	/* Initialize the window */
+	glfwSwapInterval(1);
+	glfwSetFramebufferSizeCallback(win, framebuffer_size_callback);
+	glfwSetKeyCallback(win, key_callback);
+	glfwSetMouseButtonCallback(win, mouse_button_callback);
+	glfwSetCursorPosCallback(win, mouse_pos_callback);
+
+	int width;
+	int height;
+	glfwGetFramebufferSize(win, &width, &height);
+	framebuffer_size_callback(win, width, height);
 
 	/* Main loop */
 	while(!glfwWindowShouldClose(win))
 	{
-		glfwSwapBuffers(win);
 		glfwPollEvents();
+		glfwSwapBuffers(win);
 	}
 
 terminate:

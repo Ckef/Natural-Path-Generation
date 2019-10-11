@@ -8,7 +8,6 @@
  * @param  description  Optional null terminated message string (can be NULL).
  *
  * The description will be formatted according to *printf format specification.
- *
  */
 void output(const char* description, ...);
 
@@ -18,7 +17,6 @@ void output(const char* description, ...);
  * @param  description  Optional null terminated message string (can be NULL).
  *
  * The description will be formatted according to *printf format specification.
- *
  */
 void throw_error(const char* description, ...);
 

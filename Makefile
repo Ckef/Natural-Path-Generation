@@ -59,13 +59,16 @@ clean-all: clean
 # Builds
 
 HEADERS = \
+ include/include.h \
  include/input.h \
- include/output.h
+ include/output.h \
+ include/patch.h
 
 OBJS = \
  $(OUT)/glad.o \
  $(OUT)/input.o \
- $(OUT)/output.o
+ $(OUT)/output.o \
+ $(OUT)/patch.o
 
 # Dependencies
 $(OUT)/glad.o: depend/glad/glad.c | $(OUT)

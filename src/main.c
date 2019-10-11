@@ -1,10 +1,7 @@
 
-/* Main header includes */
-#include <include.h>
-
-#include <input.h>
-#include <output.h>
-#include <stdio.h>
+#include "include.h"
+#include "input.h"
+#include "output.h"
 
 /*****************************/
 int main(int argc, char* argv[])
@@ -43,8 +40,7 @@ int main(int argc, char* argv[])
 	glfwSetMouseButtonCallback(win, mouse_button_callback);
 	glfwSetCursorPosCallback(win, mouse_pos_callback);
 
-	int width;
-	int height;
+	int width, height;
 	glfwGetFramebufferSize(win, &width, &height);
 	framebuffer_size_callback(win, width, height);
 

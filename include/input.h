@@ -2,8 +2,7 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-/* Main header includes */
-#include <include.h>
+#include "include.h"
 
 /**
  * Error callback.

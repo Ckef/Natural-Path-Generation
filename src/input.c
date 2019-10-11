@@ -1,8 +1,6 @@
 
-/* Main header includes */
-#include <include.h>
-
-#include <output.h>
+#include "include.h"
+#include "output.h"
 
 /*****************************/
 void error_callback(int error, const char* description)

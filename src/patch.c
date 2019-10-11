@@ -44,7 +44,7 @@ int create_patch(Patch* patch, unsigned int size)
 
 	/* Loop over all squares inbetween vertices, add two triangles */
 	/* Assumes the vertices are stored column-major */
-	unsigned int c, r, i;
+	unsigned int i, c, r;
 	for(i = 0, c = 0; c < (size-1); ++c)
 		for(r = 0; r < (size-1); ++r)
 		{
@@ -72,4 +72,46 @@ void destroy_patch(Patch* patch)
 	glDeleteBuffers(1, &patch->indices);
 
 	free(patch->data);
+}
+
+/*****************************/
+int populate_patch(Patch* patch, PatchGenerator generator, void* opt)
+{
+	/* Generate the terrain */
+	if(!generator(patch->size, patch->data, opt))
+	{
+		throw_error("Could not populate patch due to faulty generation.");
+		return 0;
+	}
+
+	/* Temporary buffer to generate vertex data */
+	size_t vertSize = sizeof(float) * patch->size * patch->size * 3;
+	float* data = malloc(vertSize);
+
+	if(data == NULL)
+	{
+		throw_error("Failed to allocate memory to generate vertices.");
+		return 0;
+	}
+	
+	/* Now fill the vertex buffer */
+	/* Again, assumes column-major */
+	/* Columns = x, rows = -y */
+	unsigned int c, r;
+	for(c = 0; c < patch->size; ++c)
+		for(r = 0; r < patch->size; ++r)
+		{
+			unsigned int i = c * patch->size + r;
+
+			/* x, y and z */
+			data[i * 3 + 0] = c;
+			data[i * 3 + 1] = patch->size - r - 1;
+			data[i * 3 + 2] = patch->data[i];
+		}
+
+	glBindBuffer(GL_ARRAY_BUFFER, patch->vertices);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, vertSize, data);
+	free(data);
+
+	return 1;
 }

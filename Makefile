@@ -14,8 +14,7 @@ help:
 	@echo "Available commands:"
 	@echo "~~~~~~~~~~~~~~~~~~~"
 	@echo "$(MAKE) clean      Clean temporary files."
-	@echo "$(MAKE) clean-all  Clean all files make produced."
-	@echo "$(MAKE) main       Build the program."
+	@echo "$(MAKE) terr       Build the program."
 	@echo ""
 
 
@@ -23,9 +22,8 @@ help:
 # Compiler/Linker options
 
 # Environment
-BIN  = bin
-OUT  = obj
-CC   = gcc
+OUT = obj
+CC  = gcc
 
 # Flags for all binaries
 CFLAGS = -Wall -Wsign-compare -Iinclude -Idepend
@@ -41,18 +39,12 @@ LFLAGS = -lglfw3 -lX11 -lGL -pthread -lm -ldl
 # Directory management
 
 # Creation
-$(BIN):
-	@mkdir -p $(BIN)
-
 $(OUT):
 	@mkdir -p $(OUT)
 
 # Cleaning
 clean:
 	@rm -Rf $(OUT)
-
-clean-all: clean
-	@rm -Rf $(BIN)
 
 
 ###############################
@@ -62,13 +54,15 @@ HEADERS = \
  include/include.h \
  include/input.h \
  include/output.h \
- include/patch.h
+ include/patch.h \
+ include/shader.h
 
 OBJS = \
  $(OUT)/glad.o \
  $(OUT)/input.o \
  $(OUT)/output.o \
- $(OUT)/patch.o
+ $(OUT)/patch.o \
+ $(OUT)/shader.o
 
 # Dependencies
 $(OUT)/glad.o: depend/glad/glad.c | $(OUT)
@@ -79,5 +73,5 @@ $(OUT)/%.o: src/%.c $(HEADERS) | $(OUT)
 	$(CC) $(OFLAGS) $< -o $@
 
 # Main binary
-main: src/main.c $(OBJS) | $(BIN)
-	$(CC) $(CFLAGS) $< $(OBJS) -o $(BIN)/$@ $(LFLAGS)
+terr: src/main.c $(OBJS)
+	$(CC) $(CFLAGS) $< $(OBJS) -o $@ $(LFLAGS)

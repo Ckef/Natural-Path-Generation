@@ -96,7 +96,7 @@ int populate_patch(Patch* patch, PatchGenerator generator, void* opt)
 	
 	/* Now fill the vertex buffer */
 	/* Again, assumes column-major */
-	/* Columns = x, rows = -y */
+	/* Columns = x, rows = -y, height = -z */
 	unsigned int c, r;
 	for(c = 0; c < patch->size; ++c)
 		for(r = 0; r < patch->size; ++r)
@@ -104,9 +104,9 @@ int populate_patch(Patch* patch, PatchGenerator generator, void* opt)
 			unsigned int i = c * patch->size + r;
 
 			/* x, y and z */
-			data[i * 3 + 0] = c;
-			data[i * 3 + 1] = patch->size - r - 1;
-			data[i * 3 + 2] = patch->data[i];
+			data[i*3+0] = c;
+			data[i*3+1] = patch->size - r - 1;
+			data[i*3+2] = -patch->data[i];
 		}
 
 	glBindBuffer(GL_ARRAY_BUFFER, patch->vertices);

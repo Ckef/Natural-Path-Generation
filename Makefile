@@ -59,8 +59,7 @@ HEADERS = \
 
 OBJS = \
  $(OUT)/glad.o \
- $(OUT)/input.o \
- $(OUT)/output.o \
+ $(OUT)/io.o \
  $(OUT)/patch.o \
  $(OUT)/shader.o
 

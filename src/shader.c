@@ -1,6 +1,6 @@
 
 #include "include.h"
-#include "output.h"
+#include "io.h"
 #include "shader.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -94,6 +94,9 @@ inline int create_shader(Shader* shader, const char* v, const char* f)
 		return 0;
 	}
 
+	/* Print that the shader files are correct */
+	output("Shaders succesfully loaded, compiled and linked: %s %s", v, f);
+
 	return 1;
 }
 
@@ -101,14 +104,4 @@ inline int create_shader(Shader* shader, const char* v, const char* f)
 void destroy_shader(Shader* shader)
 {
 	glDeleteProgram(shader->program);
-}
-
-/*****************************/
-void shader_draw(Shader* shader, Patch* patch)
-{
-	glUseProgram(shader->program);
-	glBindVertexArray(patch->vao);
-
-	size_t elems = 6 * (patch->size-1) * (patch->size-1);
-	glDrawElements(GL_TRIANGLES, elems, GL_UNSIGNED_INT, (GLvoid*)0);
 }

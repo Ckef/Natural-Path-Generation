@@ -1,6 +1,6 @@
 
 #include "include.h"
-#include "output.h"
+#include "io.h"
 #include "patch.h"
 #include <stdlib.h>
 
@@ -9,6 +9,7 @@ int create_patch(Patch* patch, unsigned int size)
 {
 	/* Allocate CPU memory */
 	size_t vertSize = sizeof(float) * size * size;
+	glm_mat4_identity(patch->mod);
 	patch->size = size;
 	patch->data = malloc(vertSize);
 
@@ -48,10 +49,13 @@ int create_patch(Patch* patch, unsigned int size)
 	for(i = 0, c = 0; c < (size-1); ++c)
 		for(r = 0; r < (size-1); ++r)
 		{
+			/* To the right being x, downwards being y: */
+			/* top left, bottom left, top right */
 			ind[i++] = c * size + r;
 			ind[i++] = c * size + r + 1;
 			ind[i++] = (c+1) * size + r;
 
+			/* bottom left, bottom right, top right */
 			ind[i++] = c * size + r + 1;
 			ind[i++] = (c+1) * size + r + 1;
 			ind[i++] = (c+1) * size + r;
@@ -96,7 +100,7 @@ int populate_patch(Patch* patch, PatchGenerator generator, void* opt)
 	
 	/* Now fill the vertex buffer */
 	/* Again, assumes column-major */
-	/* Columns = x, rows = -y, height = -z */
+	/* Columns = x, rows = y, height = z */
 	unsigned int c, r;
 	for(c = 0; c < patch->size; ++c)
 		for(r = 0; r < patch->size; ++r)
@@ -105,8 +109,8 @@ int populate_patch(Patch* patch, PatchGenerator generator, void* opt)
 
 			/* x, y and z */
 			data[i*3+0] = c;
-			data[i*3+1] = patch->size - r - 1;
-			data[i*3+2] = -patch->data[i];
+			data[i*3+1] = r;
+			data[i*3+2] = patch->data[i];
 		}
 
 	glBindBuffer(GL_ARRAY_BUFFER, patch->vertices);

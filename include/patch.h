@@ -2,11 +2,14 @@
 #ifndef PATCH_H
 #define PATCH_H
 
+#include "cglm/cglm.h"
 #include "include.h"
 
 /* Patch definition */
 typedef struct
 {
+	mat4 mod;  /* Model matrix, modify at free will */
+
 	unsigned int size; /* Width and height in vertices (always a square) */
 	float*       data; /* Column-major */
 	GLuint       vao;

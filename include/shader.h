@@ -3,7 +3,6 @@
 #define SHADER_H
 
 #include "include.h"
-#include "patch.h"
 
 /* Shader definition */
 typedef struct
@@ -25,10 +24,5 @@ int create_shader(Shader* shader, const char* v, const char* f);
  * Destroys a shader.
  */
 void destroy_shader(Shader* shader);
-
-/**
- * Instructs a shader to draw a patch.
- */
-void shader_draw(Shader* shader, Patch* patch);
 
 #endif

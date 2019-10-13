@@ -1,19 +1,7 @@
 
 #include "include.h"
-#include "input.h"
-#include "output.h"
-#include "patch.h"
-#include "shader.h"
-
-/*****************************/
-int populate(unsigned int size, float* data, void* opt)
-{
-	/* Make a flat plane */
-	for(unsigned i = 0; i < size * size; ++i)
-		data[i] = 0.0f;
-
-	return 1;
-}
+#include "io.h"
+#include "scene.h"
 
 /*****************************/
 int main(int argc, char* argv[])
@@ -41,7 +29,7 @@ int main(int argc, char* argv[])
 
 	output("GLFW opened a window succesfully.");
 
-	/* Load OpenGL context */
+	/* Initialize OpenGL context */
 	glfwMakeContextCurrent(win);
 	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 	glClearColor(.7f, .7f, .7f, 1.0f);
@@ -58,12 +46,14 @@ int main(int argc, char* argv[])
 	framebuffer_size_callback(win, width, height);
 
 	/* Init a scene */
-	Patch patch;
-	create_patch(&patch, 2);
-	populate_patch(&patch, populate, NULL);
+	Scene scene;
+	if(!create_scene(&scene))
+	{
+		throw_error("Could not create a scene.");
+		goto terminate;
+	}
 
-	Shader shad;
-	create_shader(&shad, "shaders/col.vert", "shaders/col.frag");
+	output("Scene was created succesfully.");
 
 	/* Main loop */
 	while(!glfwWindowShouldClose(win))
@@ -73,15 +63,14 @@ int main(int argc, char* argv[])
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		/* Draw smth */
-		shader_draw(&shad, &patch);
+		draw_scene(&scene);
 
 		/* Aaaaand finish. */
 		glfwSwapBuffers(win);
 	}
 
 	/* Clean up the scene */
-	destroy_shader(&shad);
-	destroy_patch(&patch);
+	destroy_scene(&scene);
 
 terminate:
 	/* Terminate GLFW and exit */

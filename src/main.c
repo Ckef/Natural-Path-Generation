@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 	/* Load OpenGL context */
 	glfwMakeContextCurrent(win);
 	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	glClearColor(.7f, .7f, .7f, 1.0f);
 	
 	/* Initialize the window */
 	glfwSwapInterval(1);

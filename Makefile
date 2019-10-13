@@ -57,14 +57,14 @@ clean:
 
 HEADERS = \
  include/include.h \
- include/io.h \
+ include/output.h \
  include/patch.h \
  include/scene.h \
  include/shader.h
 
 OBJS = \
  $(OUT)/glad.o \
- $(OUT)/io.o \
+ $(OUT)/output.o \
  $(OUT)/patch.o \
  $(OUT)/scene.o \
  $(OUT)/shader.o

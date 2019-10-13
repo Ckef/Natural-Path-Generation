@@ -1,6 +1,6 @@
 
 #include "include.h"
-#include "io.h"
+#include "output.h"
 #include "patch.h"
 #include <stdlib.h>
 

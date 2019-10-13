@@ -1,6 +1,6 @@
 
 #include "include.h"
-#include "io.h"
+#include "output.h"
 #include "shader.h"
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,7 +1,37 @@
 
 #include "include.h"
-#include "io.h"
+#include "output.h"
 #include "scene.h"
+
+/*****************************/
+static void error_callback(int error, const char* description)
+{
+	throw_error(description);
+}
+
+/*****************************/
+static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	glViewport(0, 0, width, height);
+}
+
+/*****************************/
+static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	/* All actions */
+	if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, GLFW_TRUE);
+}
+
+/*****************************/
+static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+}
+
+/*****************************/
+static void mouse_pos_callback(GLFWwindow* window, double x, double y)
+{
+}
 
 /*****************************/
 int main(int argc, char* argv[])

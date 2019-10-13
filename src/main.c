@@ -3,6 +3,9 @@
 #include "output.h"
 #include "scene.h"
 
+/* Scene to forward input callbacks to */
+static Scene* active_scene = NULL;
+
 /*****************************/
 static void error_callback(int error, const char* description)
 {
@@ -12,13 +15,16 @@ static void error_callback(int error, const char* description)
 /*****************************/
 static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
+	/* Set viewport and aspect of the active camera */
 	glViewport(0, 0, width, height);
+	if(active_scene != NULL)
+		scene_set_aspect(active_scene, (float)width/(float)height);
 }
 
 /*****************************/
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-	/* All actions */
+	/* Close window on escape */
 	if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
@@ -71,11 +77,7 @@ int main(int argc, char* argv[])
 	glfwSetMouseButtonCallback(win, mouse_button_callback);
 	glfwSetCursorPosCallback(win, mouse_pos_callback);
 
-	int width, height;
-	glfwGetFramebufferSize(win, &width, &height);
-	framebuffer_size_callback(win, width, height);
-
-	/* Init a scene */
+	/* Create a scene */
 	Scene scene;
 	if(!create_scene(&scene))
 	{
@@ -84,6 +86,14 @@ int main(int argc, char* argv[])
 	}
 
 	output("Scene was created succesfully.");
+
+	/* Set scene as active so it receives input callbacks */
+	active_scene = &scene;
+
+	/* Now let the aspect ratio be triggered by a forced framebuffer resize */
+	int width, height;
+	glfwGetFramebufferSize(win, &width, &height);
+	framebuffer_size_callback(win, width, height);
 
 	/* Main loop */
 	while(!glfwWindowShouldClose(win))
@@ -101,6 +111,7 @@ int main(int argc, char* argv[])
 
 	/* Clean up the scene */
 	destroy_scene(&scene);
+	active_scene = NULL;
 
 terminate:
 	/* Terminate GLFW and exit */

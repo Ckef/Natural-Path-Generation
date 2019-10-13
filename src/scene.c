@@ -16,7 +16,7 @@ static int populate(unsigned int size, float* data, void* opt)
 /*****************************/
 int create_scene(Scene* scene)
 {
-	if(!create_patch(&scene->patch, 10))
+	if(!create_patch(&scene->patch, PATCH_SIZE))
 	{
 		throw_error("Could not create patch for scene.");
 		return 0;
@@ -30,7 +30,14 @@ int create_scene(Scene* scene)
 	}
 
 	populate_patch(&scene->patch, populate, NULL);
-	glm_mat4_identity(scene->camera.pv);
+
+	/* Setup camera */
+	vec3 eye    = {-30,-30,40};
+	vec3 center = {(PATCH_SIZE-1)/2.0f,(PATCH_SIZE-1)/2.0f,0};
+	vec3 up     = {0,0,1};
+
+	glm_lookat(eye, center, up, scene->camera.view);
+	scene_set_aspect(scene, 1.0f);
 
 	return 1;
 }
@@ -40,6 +47,14 @@ void destroy_scene(Scene* scene)
 {
 	destroy_patch(&scene->patch);
 	destroy_shader(&scene->shader);
+}
+
+/*****************************/
+void scene_set_aspect(Scene* scene, float aspect)
+{
+	/* Calculate new projection matrix and update pv */
+	glm_perspective(CAM_FOV, aspect, CAM_NEAR, CAM_FAR, scene->camera.proj);
+	glm_mat4_mul(scene->camera.proj, scene->camera.view, scene->camera.pv);
 }
 
 /*****************************/

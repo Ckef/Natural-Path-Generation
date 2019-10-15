@@ -43,14 +43,33 @@ int create_scene(Scene* scene);
 void destroy_scene(Scene* scene);
 
 /**
- * Changes the aspect ratio of the scene's camera.
- */
-void scene_set_aspect(Scene* scene, float aspect);
-
-/**
  * Draws the scene.
  */
 void draw_scene(Scene* scene);
+
+/**
+ * Updates the scene.
+ *
+ * @param  dTime  Delta time of the current frame.
+ */
+void update_scene(Scene* scene, double dTime);
+
+/**
+ * Callback to be called when the framebuffer is resized.
+ *
+ * @param  width   New width of the buffer.
+ * @param  height  New height of the buffer.
+ */
+void scene_framebuffer_size_callback(Scene* scene, int width, int height);
+
+/**
+ * Callback to be called when a key is pressed.
+ *
+ * @param  key     GLFW key pressed.
+ * @param  action  GLFW_PRESS, GLFW_RELEASE or GLFW_REPEAT.
+ * @param  mods    GLFW bitfield describing modifiers being held down.
+ */
+void scene_key_callback(Scene* scene, int key, int action, int mods);
 
 
 #endif

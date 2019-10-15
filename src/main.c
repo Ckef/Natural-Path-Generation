@@ -15,10 +15,12 @@ static void error_callback(int error, const char* description)
 /*****************************/
 static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-	/* Set viewport and aspect of the active camera */
+	/* Set viewport */
 	glViewport(0, 0, width, height);
+
+	/* Pass it to the active scene */
 	if(active_scene != NULL)
-		scene_set_aspect(active_scene, (float)width/(float)height);
+		scene_framebuffer_size_callback(active_scene, width, height);
 }
 
 /*****************************/
@@ -27,6 +29,10 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 	/* Close window on escape */
 	if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
+
+	/* Pass it to the active scene */
+	if(active_scene != NULL)
+		scene_key_callback(active_scene, key, action, mods);
 }
 
 /*****************************/
@@ -68,7 +74,7 @@ int main(int argc, char* argv[])
 	/* Initialize OpenGL context */
 	glfwMakeContextCurrent(win);
 	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-	glClearColor(.7f, .7f, .7f, 1.0f);
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	
 	/* Initialize the window */
 	glfwSwapInterval(1);
@@ -96,17 +102,22 @@ int main(int argc, char* argv[])
 	framebuffer_size_callback(win, width, height);
 
 	/* Main loop */
+	double time = glfwGetTime();
+
 	while(!glfwWindowShouldClose(win))
 	{
-		/* Process events + prepare drawing buffer */
-		glfwPollEvents();
-		glClear(GL_COLOR_BUFFER_BIT);
-
 		/* Draw smth */
+		glClear(GL_COLOR_BUFFER_BIT);
 		draw_scene(&scene);
 
-		/* Aaaaand finish. */
+		/* Swap buffers + process events */
 		glfwSwapBuffers(win);
+		glfwPollEvents();
+
+		/* Update scene */
+		double newTime = glfwGetTime();
+		update_scene(&scene, newTime - time);
+		time = newTime;
 	}
 
 	/* Clean up the scene */

@@ -3,6 +3,8 @@
 #include "output.h"
 #include "scene.h"
 #include <math.h>
+#include <stdlib.h>
+#include <time.h>
 
 /* Angle of the camera and whether it's rotating */
 static float angle = 0.0f;
@@ -11,9 +13,9 @@ static int rotating = 0;
 /*****************************/
 static int populate(unsigned int size, float* data, void* opt)
 {
-	/* Make a flat plane */
+	/* Make a plane with noise ranging from 0 to 1 */
 	for(unsigned i = 0; i < size * size; ++i)
-		data[i] = 0.0f;
+		data[i] = rand() / (float)RAND_MAX;
 
 	return 1;
 }
@@ -78,6 +80,9 @@ int create_scene(Scene* scene)
 	/* The set_camera takes care of the view and pv matrices */
 	glm_mat4_identity(scene->camera.proj);
 	set_camera(&scene->camera, 0.0);
+
+	/* Initialize random number generator */
+	srand(time(NULL));
 
 	return 1;
 }

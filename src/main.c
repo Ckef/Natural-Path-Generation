@@ -74,8 +74,10 @@ int main(int argc, char* argv[])
 	/* Initialize OpenGL context */
 	glfwMakeContextCurrent(win);
 	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-	
+	glEnable(GL_DEPTH_TEST);
+
 	/* Initialize the window */
 	glfwSwapInterval(1);
 	glfwSetFramebufferSizeCallback(win, framebuffer_size_callback);
@@ -107,7 +109,7 @@ int main(int argc, char* argv[])
 	while(!glfwWindowShouldClose(win))
 	{
 		/* Draw smth */
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		draw_scene(&scene);
 
 		/* Swap buffers + process events */

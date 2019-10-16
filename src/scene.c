@@ -6,10 +6,6 @@
 #include <stdlib.h>
 #include <time.h>
 
-/* Angle of the camera and whether it's rotating */
-static float angle = 0.0f;
-static int rotating = 0;
-
 /*****************************/
 static int populate(unsigned int size, float* data, void* opt)
 {
@@ -21,9 +17,9 @@ static int populate(unsigned int size, float* data, void* opt)
 }
 
 /*****************************/
-static void set_camera(Camera* camera, double dTime)
+static void set_camera(Scene* scene, double dTime)
 {
-	glm_mat4_identity(camera->view);
+	glm_mat4_identity(scene->camera.view);
 
 	vec3 x    = {1,0,0};
 	vec3 y    = {0,1,0};
@@ -33,29 +29,29 @@ static void set_camera(Camera* camera, double dTime)
 	vec3 cent = {(PATCH_SIZE-1)/2.0f, (PATCH_SIZE-1)/2.0f, 0};
 
 	/* Update angle */
-	angle += dTime * rotating;
+	scene->cam_angle += dTime * scene->cam_rotating;
 
 	/* Rotate camera down a bit, so it looks down at the patch */
-	glm_rotate(camera->view, GLM_PI_4 * 0.5f, x);
+	glm_rotate(scene->camera.view, GLM_PI_4 * 0.5f, x);
 	/* Move camera back a bit */
-	glm_translate(camera->view, back);
+	glm_translate(scene->camera.view, back);
 	/* Move camera up a bit */
-	glm_translate(camera->view, down);
+	glm_translate(scene->camera.view, down);
 	/* Rotate scene so camera is looking at patch */
-	glm_rotate(camera->view, GLM_PI_4, y);
+	glm_rotate(scene->camera.view, GLM_PI_4, y);
 	/* Rotate scene so y is up */
-	glm_rotate(camera->view, -GLM_PI_2, x);
+	glm_rotate(scene->camera.view, -GLM_PI_2, x);
 
 	/* Translate patch back to its original position */
-	glm_translate(camera->view, cent);
+	glm_translate(scene->camera.view, cent);
 	/* Rotate patch around 0,0,0 */
-	glm_rotate(camera->view, angle, z);
+	glm_rotate(scene->camera.view, scene->cam_angle, z);
 	/* Translate center of patch to 0,0,0 */
 	glm_vec3_negate(cent);
-	glm_translate(camera->view, cent);
+	glm_translate(scene->camera.view, cent);
 
 	/* Don't forget to update the pv matrix */
-	glm_mat4_mul(camera->proj, camera->view, camera->pv);
+	glm_mat4_mul(scene->camera.proj, scene->camera.view, scene->camera.pv);
 }
 
 /*****************************/
@@ -79,7 +75,9 @@ int create_scene(Scene* scene)
 	/* Setup camera */
 	/* The set_camera takes care of the view and pv matrices */
 	glm_mat4_identity(scene->camera.proj);
-	set_camera(&scene->camera, 0.0);
+	scene->cam_angle = 0.0f;
+	scene->cam_rotating = 0;
+	set_camera(scene, 0.0);
 
 	/* Initialize random number generator */
 	srand(time(NULL));
@@ -115,8 +113,8 @@ void draw_scene(Scene* scene)
 /*****************************/
 void update_scene(Scene* scene, double dTime)
 {
-	if(rotating)
-		set_camera(&scene->camera, dTime);
+	if(scene->cam_rotating)
+		set_camera(scene, dTime);
 }
 
 /*****************************/
@@ -134,9 +132,9 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 {
 	/* Signal when the camera should be rotating */
 	if(key == GLFW_KEY_LEFT && action == GLFW_PRESS)
-		rotating = -1;
+		scene->cam_rotating = -1;
 	if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
-		rotating = 1;
+		scene->cam_rotating = 1;
 	if((key == GLFW_KEY_LEFT || key == GLFW_KEY_RIGHT) && action == GLFW_RELEASE)
-		rotating = 0;
+		scene->cam_rotating = 0;
 }

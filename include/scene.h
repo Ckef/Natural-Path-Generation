@@ -28,6 +28,10 @@ typedef struct
 	Patch  patch;
 	Shader shader;
 
+	/* Camera movements */
+	float cam_angle;
+	int   cam_rotating; /* -1, 0, 1 */
+
 } Scene;
 
 /**

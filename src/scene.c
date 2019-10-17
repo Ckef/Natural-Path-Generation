@@ -118,6 +118,8 @@ int create_scene(Scene* scene)
 	glVertexAttribPointer(
 		1, 3, GL_FLOAT, GL_FALSE, attrSize * 2, (GLvoid*)(uintptr_t)attrSize);
 
+	glm_mat4_identity(scene->help_mod);
+
 	/* Setup camera */
 	/* The set_camera takes care of the view and pv matrices */
 	glm_mat4_identity(scene->camera.proj);
@@ -151,7 +153,6 @@ void draw_scene(Scene* scene)
 
 	mat4 mvp;
 	glm_mat4_mul(scene->camera.pv, scene->patch.mod, mvp);
-
 	GLint loc = glGetUniformLocation(scene->patch_shader.program, "MVP");
 	glUniformMatrix4fv(loc, 1, GL_FALSE, (float*)mvp);
 
@@ -164,8 +165,9 @@ void draw_scene(Scene* scene)
 	glDisable(GL_DEPTH_TEST);
 	glUseProgram(scene->help_shader.program);
 
+	glm_mat4_mul(scene->camera.pv, scene->help_mod, mvp);
 	loc = glGetUniformLocation(scene->help_shader.program, "MVP");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, (float*)scene->camera.pv);
+	glUniformMatrix4fv(loc, 1, GL_FALSE, (float*)mvp);
 
 	/* Draw helper geometry */
 	glBindVertexArray(scene->help_vao);
@@ -200,4 +202,14 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 		scene->cam_rotating = 1;
 	if((key == GLFW_KEY_Q || key == GLFW_KEY_E) && action == GLFW_RELEASE)
 		scene->cam_rotating = 0;
+
+	/* Move the helper geometry */
+	if(key == GLFW_KEY_UP && action == GLFW_PRESS)
+		glm_translate_y(scene->help_mod, PATCH_SIZE-1);
+	if(key == GLFW_KEY_DOWN && action == GLFW_PRESS)
+		glm_translate_y(scene->help_mod, -(PATCH_SIZE-1));
+	if(key == GLFW_KEY_LEFT && action == GLFW_PRESS)
+		glm_translate_x(scene->help_mod, -(PATCH_SIZE-1));
+	if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
+		glm_translate_x(scene->help_mod, PATCH_SIZE-1);
 }

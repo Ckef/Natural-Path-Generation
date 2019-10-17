@@ -43,8 +43,10 @@ typedef struct
 	Shader patch_shader;
 
 	/* Camera movements */
+	vec3  cam_position;
 	float cam_angle;
 	int   cam_rotating; /* -1, 0, 1 */
+	int   cam_move;     /* Non-zero if position changed */
 
 } Scene;
 

@@ -21,6 +21,7 @@ static void set_camera(Scene* scene, double dTime)
 {
 	glm_mat4_identity(scene->camera.view);
 
+	vec3 pos;
 	vec3 x    = {1,0,0};
 	vec3 y    = {0,1,0};
 	vec3 z    = {0,0,1};
@@ -49,6 +50,10 @@ static void set_camera(Scene* scene, double dTime)
 	/* Translate center of patch to 0,0,0 */
 	glm_vec3_negate(cent);
 	glm_translate(scene->camera.view, cent);
+
+	/* Translate to camera position */
+	glm_vec3_negate_to(scene->cam_position, pos);
+	glm_translate(scene->camera.view, pos);
 
 	/* Don't forget to update the pv matrix */
 	glm_mat4_mul(scene->camera.proj, scene->camera.view, scene->camera.pv);
@@ -162,8 +167,10 @@ int create_scene(Scene* scene)
 	/* Setup camera */
 	/* The set_camera takes care of the view and pv matrices */
 	glm_mat4_identity(scene->camera.proj);
+	glm_vec3_zero(scene->cam_position);
 	scene->cam_angle = 0.0f;
 	scene->cam_rotating = 0;
+	scene->cam_move = 0;
 	set_camera(scene, 0.0);
 
 	return 1;
@@ -224,8 +231,10 @@ void draw_scene(Scene* scene)
 /*****************************/
 void update_scene(Scene* scene, double dTime)
 {
-	if(scene->cam_rotating)
+	if(scene->cam_move || scene->cam_rotating)
 		set_camera(scene, dTime);
+
+	scene->cam_move = 0;
 }
 
 /*****************************/
@@ -243,11 +252,21 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 {
 	/* Signal when the camera should be rotating */
 	if(key == GLFW_KEY_Q && action == GLFW_PRESS)
-		scene->cam_rotating = -1;
-	if(key == GLFW_KEY_E && action == GLFW_PRESS)
 		scene->cam_rotating = 1;
+	if(key == GLFW_KEY_E && action == GLFW_PRESS)
+		scene->cam_rotating = -1;
 	if((key == GLFW_KEY_Q || key == GLFW_KEY_E) && action == GLFW_RELEASE)
 		scene->cam_rotating = 0;
+
+	/* Move the camera */
+	if(key == GLFW_KEY_W && action == GLFW_PRESS)
+		scene->cam_position[1] += PATCH_SIZE-1, scene->cam_move = 1;
+	if(key == GLFW_KEY_S && action == GLFW_PRESS)
+		scene->cam_position[1] -= PATCH_SIZE-1, scene->cam_move = 1;
+	if(key == GLFW_KEY_A && action == GLFW_PRESS)
+		scene->cam_position[0] -= PATCH_SIZE-1, scene->cam_move = 1;
+	if(key == GLFW_KEY_D && action == GLFW_PRESS)
+		scene->cam_position[0] += PATCH_SIZE-1, scene->cam_move = 1;
 
 	/* Move the helper geometry */
 	if(key == GLFW_KEY_UP && action == GLFW_PRESS)

@@ -79,6 +79,14 @@ void destroy_patch(Patch* patch)
 }
 
 /*****************************/
+void draw_patch(Patch* patch)
+{
+	glBindVertexArray(patch->vao);
+	size_t elems = 6 * (patch->size-1) * (patch->size-1);
+	glDrawElements(GL_TRIANGLES, elems, GL_UNSIGNED_INT, (GLvoid*)0);
+}
+
+/*****************************/
 int populate_patch(Patch* patch, PatchGenerator generator, void* opt)
 {
 	/* Generate the terrain */

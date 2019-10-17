@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 /*****************************/
-inline int create_shader(Shader* shader, const char* v, const char* f)
+int create_shader(Shader* shader, const char* v, const char* f)
 {
 	/* Open the files */
 	FILE* vf = fopen(v, "r");

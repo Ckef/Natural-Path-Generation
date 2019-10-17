@@ -33,13 +33,14 @@ typedef struct
 typedef struct
 {
 	Camera camera;
-	Patch  patch;
-	Shader patch_shader;
+	Patch* patches;
+	size_t num_patches;
 
 	mat4   help_mod; /* Model matrix of the helper graphics */
 	GLuint help_vao;
 	GLuint help_buffer;
 	Shader help_shader;
+	Shader patch_shader;
 
 	/* Camera movements */
 	float cam_angle;

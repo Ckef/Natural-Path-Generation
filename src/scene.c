@@ -10,7 +10,7 @@
 static int populate(unsigned int size, float* data, void* opt)
 {
 	/* Make a plane with noise ranging from 0 to 1 */
-	for(unsigned i = 0; i < size * size; ++i)
+	for(unsigned int i = 0; i < size * size; ++i)
 		data[i] = rand() / (float)RAND_MAX;
 
 	return 1;
@@ -55,6 +55,45 @@ static void set_camera(Scene* scene, double dTime)
 }
 
 /*****************************/
+static int add_patch(Scene* scene, PatchGenerator generator)
+{
+	/* Allocate more memory */
+	size_t newSize = (scene->num_patches+1) * sizeof(Patch);
+	Patch* new = realloc(scene->patches, newSize);
+
+	if(!new)
+	{
+		throw_error("Could not reallocate memory for a new patch.");
+		return 0;
+	}
+
+	scene->patches = new;
+
+	/* Create a new patch */
+	if(!create_patch(new + scene->num_patches, PATCH_SIZE))
+	{
+		throw_error("Could not create a new patch for scene.");
+		return 0;
+	}
+
+	/* Set its position to the current selection */
+	glm_mat4_copy(scene->help_mod, new[scene->num_patches].mod);
+
+	/* Populate the new patch */
+	if(!populate_patch(new + scene->num_patches, generator, NULL))
+	{
+		throw_error("Population of newly created patch failed.");
+		return 0;
+	}
+
+	/* Only update num patches now so we don't get confused later on */
+	/* The reallocation doesn't matter, as it's based on this number */
+	++scene->num_patches;
+
+	return 1;
+}
+
+/*****************************/
 int create_scene(Scene* scene)
 {
 	/* Load shaders */
@@ -71,16 +110,18 @@ int create_scene(Scene* scene)
 		return 0;
 	}
 
-	/* Create and populate a patch */
-	if(!create_patch(&scene->patch, PATCH_SIZE))
+	/* Create the first patch */
+	/* Make sure to initialize the helper model matrix here */
+	glm_mat4_identity(scene->help_mod);
+	scene->patches = NULL;
+	scene->num_patches = 0;
+
+	if(!add_patch(scene, populate))
 	{
-		throw_error("Could not create patch for scene.");
 		destroy_shader(&scene->patch_shader);
 		destroy_shader(&scene->help_shader);
 		return 0;
 	}
-
-	populate_patch(&scene->patch, populate, NULL);
 
 	/* Create helper geometry */
 	/* Contains a square to indicate the selected patch */
@@ -118,17 +159,12 @@ int create_scene(Scene* scene)
 	glVertexAttribPointer(
 		1, 3, GL_FLOAT, GL_FALSE, attrSize * 2, (GLvoid*)(uintptr_t)attrSize);
 
-	glm_mat4_identity(scene->help_mod);
-
 	/* Setup camera */
 	/* The set_camera takes care of the view and pv matrices */
 	glm_mat4_identity(scene->camera.proj);
 	scene->cam_angle = 0.0f;
 	scene->cam_rotating = 0;
 	set_camera(scene, 0.0);
-
-	/* Initialize random number generator */
-	srand(time(NULL));
 
 	return 1;
 }
@@ -138,35 +174,45 @@ void destroy_scene(Scene* scene)
 {
 	destroy_shader(&scene->patch_shader);
 	destroy_shader(&scene->help_shader);
-	destroy_patch(&scene->patch);
 
 	glDeleteVertexArrays(1, &scene->help_vao);
 	glDeleteBuffers(1, &scene->help_buffer);
+
+	/* Loop over all patches to destroy them */
+	size_t p;
+	for(p = 0; p < scene->num_patches; ++p)
+		destroy_patch(scene->patches + p);
+
+	free(scene->patches);
 }
 
 /*****************************/
 void draw_scene(Scene* scene)
 {
+	mat4 mvp;
+
 	/* Setup patch shader */
 	glEnable(GL_DEPTH_TEST);
 	glUseProgram(scene->patch_shader.program);
-
-	mat4 mvp;
-	glm_mat4_mul(scene->camera.pv, scene->patch.mod, mvp);
 	GLint loc = glGetUniformLocation(scene->patch_shader.program, "MVP");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, (float*)mvp);
 
-	/* Draw patch */
-	glBindVertexArray(scene->patch.vao);
-	size_t elems = 6 * (scene->patch.size-1) * (scene->patch.size-1);
-	glDrawElements(GL_TRIANGLES, elems, GL_UNSIGNED_INT, (GLvoid*)0);
+	/* Loop over all patches */
+	size_t p;
+	for(p = 0; p < scene->num_patches; ++p)
+	{
+		glm_mat4_mul(scene->camera.pv, scene->patches[p].mod, mvp);
+		glUniformMatrix4fv(loc, 1, GL_FALSE, (float*)mvp);
+
+		/* Draw it, this assumes the above work is done, which it is :) */
+		draw_patch(scene->patches + p);
+	}
 
 	/* Setup helper geometry shader */
 	glDisable(GL_DEPTH_TEST);
 	glUseProgram(scene->help_shader.program);
+	loc = glGetUniformLocation(scene->help_shader.program, "MVP");
 
 	glm_mat4_mul(scene->camera.pv, scene->help_mod, mvp);
-	loc = glGetUniformLocation(scene->help_shader.program, "MVP");
 	glUniformMatrix4fv(loc, 1, GL_FALSE, (float*)mvp);
 
 	/* Draw helper geometry */
@@ -212,4 +258,8 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 		glm_translate_x(scene->help_mod, -(PATCH_SIZE-1));
 	if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
 		glm_translate_x(scene->help_mod, PATCH_SIZE-1);
+
+	/* Add a new patch */
+	if(key == GLFW_KEY_ENTER && action == GLFW_PRESS)
+		add_patch(scene, populate);
 }

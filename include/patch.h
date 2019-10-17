@@ -42,6 +42,13 @@ int create_patch(Patch* patch, unsigned int size);
 void destroy_patch(Patch* patch);
 
 /**
+ * Draws a patch.
+ *
+ * Note: Assumes some shader program is bound and set up.
+ */
+void draw_patch(Patch* patch);
+
+/**
  * Populates the patch with vertex data given a generator.
  *
  * @param  generator  Function that generates a terrain. 

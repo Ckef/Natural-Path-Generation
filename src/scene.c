@@ -86,20 +86,20 @@ int create_scene(Scene* scene)
 	/* Contains a square to indicate the selected patch */
 	/* Plus the axes of the coordinate system */
 	float help_geom[] = {
-		0,          0,          0, .5f, .5f, .5f,
-		PATCH_SIZE, 0,          0, .5f, .5f, .5f,
-		PATCH_SIZE, PATCH_SIZE, 0, .5f, .5f, .5f,
-		0,          PATCH_SIZE, 0, .5f, .5f, .5f,
+		0,            0,            0, .5f, .5f, .5f,
+		PATCH_SIZE-1, 0,            0, .5f, .5f, .5f,
+		PATCH_SIZE-1, PATCH_SIZE-1, 0, .5f, .5f, .5f,
+		0,            PATCH_SIZE-1, 0, .5f, .5f, .5f,
 
 		/* X axis */
-		0, 0, 0, 1, 0, 0,
-		1, 0, 0, 1, 0, 0,
+		0,         0,         0,         1, 0, 0,
+		AXES_SIZE, 0,         0,         1, 0, 0,
 		/* Y axis */
-		0, 0, 0, 0, 1, 0,
-		0, 1, 0, 0, 1, 0,
+		0,         0,         0,         0, 1, 0,
+		0,         AXES_SIZE, 0,         0, 1, 0,
 		/* Z axis */
-		0, 0, 0, 0, 0, 1,
-		0, 0, 1, 0, 0, 1
+		0,         0,         0,         0, 0, 1,
+		0,         0,         AXES_SIZE, 0, 0, 1
 	};
 
 	glGenVertexArrays(1, &scene->help_vao);
@@ -194,10 +194,10 @@ void scene_framebuffer_size_callback(Scene* scene, int width, int height)
 void scene_key_callback(Scene* scene, int key, int action, int mods)
 {
 	/* Signal when the camera should be rotating */
-	if(key == GLFW_KEY_LEFT && action == GLFW_PRESS)
+	if(key == GLFW_KEY_Q && action == GLFW_PRESS)
 		scene->cam_rotating = -1;
-	if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
+	if(key == GLFW_KEY_E && action == GLFW_PRESS)
 		scene->cam_rotating = 1;
-	if((key == GLFW_KEY_LEFT || key == GLFW_KEY_RIGHT) && action == GLFW_RELEASE)
+	if((key == GLFW_KEY_Q || key == GLFW_KEY_E) && action == GLFW_RELEASE)
 		scene->cam_rotating = 0;
 }

@@ -10,11 +10,12 @@
 /* Define some scene values */
 #define SHADER_DIR  "shaders/"
 #define PATCH_VERT  SHADER_DIR "gradient.vert"
-#define PATCH_FRAG  SHADER_DIR "gradient.frag"
+#define PATCH_FRAG  SHADER_DIR "color.frag"
 #define HELP_VERT   SHADER_DIR "color.vert"
 #define HELP_FRAG   SHADER_DIR "color.frag"
 
 #define PATCH_SIZE  101
+#define AXES_SIZE   16
 #define CAM_FOV     45.0f
 #define CAM_NEAR    0.1f
 #define CAM_FAR     1000.0f
@@ -35,6 +36,7 @@ typedef struct
 	Patch  patch;
 	Shader patch_shader;
 
+	mat4   help_mod; /* Model matrix of the helper graphics */
 	GLuint help_vao;
 	GLuint help_buffer;
 	Shader help_shader;

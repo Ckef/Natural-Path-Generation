@@ -20,5 +20,5 @@ void main()
 		2 * clamp(0.5f - pos.z, 0, 1),
 		1);
 
-	gl_Position = MVP * vec4(pos.xy, pos.z, 1);
+	gl_Position = MVP * vec4(pos.xyz, 1);
 }

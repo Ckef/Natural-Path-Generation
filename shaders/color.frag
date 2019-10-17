@@ -1,12 +1,12 @@
 
 #version 420 core
-// Input color hint
+// Input vertex color
 in vec4 color;
 
 // Output fragment color
-out vec4 col;
+out vec4 FragColor;
 
 void main()
 {
-	col = color;
+	FragColor = color;
 }

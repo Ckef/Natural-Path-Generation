@@ -57,20 +57,66 @@ static void set_camera(Scene* scene, double dTime)
 /*****************************/
 int create_scene(Scene* scene)
 {
-	if(!create_patch(&scene->patch, PATCH_SIZE))
+	/* Load shaders */
+	if(!create_shader(&scene->patch_shader, PATCH_VERT, PATCH_FRAG))
 	{
-		throw_error("Could not create patch for scene.");
+		throw_error("Could not create shader for patches in scene.");
 		return 0;
 	}
 
-	if(!create_shader(&scene->shader, "shaders/col.vert", "shaders/col.frag"))
+	if(!create_shader(&scene->help_shader, HELP_VERT, HELP_FRAG))
 	{
-		throw_error("Could not create shader for scene.");
-		destroy_patch(&scene->patch);
+		throw_error("Could not create shader for helpers in scene.");
+		destroy_shader(&scene->patch_shader);
+		return 0;
+	}
+
+	/* Create and populate a patch */
+	if(!create_patch(&scene->patch, PATCH_SIZE))
+	{
+		throw_error("Could not create patch for scene.");
+		destroy_shader(&scene->patch_shader);
+		destroy_shader(&scene->help_shader);
 		return 0;
 	}
 
 	populate_patch(&scene->patch, populate, NULL);
+
+	/* Create helper geometry */
+	/* Contains a square to indicate the selected patch */
+	/* Plus the axes of the coordinate system */
+	float help_geom[] = {
+		0,          0,          0, .5f, .5f, .5f,
+		PATCH_SIZE, 0,          0, .5f, .5f, .5f,
+		PATCH_SIZE, PATCH_SIZE, 0, .5f, .5f, .5f,
+		0,          PATCH_SIZE, 0, .5f, .5f, .5f,
+
+		/* X axis */
+		0, 0, 0, 1, 0, 0,
+		1, 0, 0, 1, 0, 0,
+		/* Y axis */
+		0, 0, 0, 0, 1, 0,
+		0, 1, 0, 0, 1, 0,
+		/* Z axis */
+		0, 0, 0, 0, 0, 1,
+		0, 0, 1, 0, 0, 1
+	};
+
+	glGenVertexArrays(1, &scene->help_vao);
+	glGenBuffers(1, &scene->help_buffer);
+
+	glBindBuffer(GL_ARRAY_BUFFER, scene->help_buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(help_geom), help_geom, GL_STATIC_DRAW);
+
+	GLsizei attrSize = sizeof(float) * 3;
+	glBindVertexArray(scene->help_vao);
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+
+	glVertexAttribPointer(
+		0, 3, GL_FLOAT, GL_FALSE, attrSize * 2, (GLvoid*)0);
+	glVertexAttribPointer(
+		1, 3, GL_FLOAT, GL_FALSE, attrSize * 2, (GLvoid*)(uintptr_t)attrSize);
 
 	/* Setup camera */
 	/* The set_camera takes care of the view and pv matrices */
@@ -88,26 +134,43 @@ int create_scene(Scene* scene)
 /*****************************/
 void destroy_scene(Scene* scene)
 {
+	destroy_shader(&scene->patch_shader);
+	destroy_shader(&scene->help_shader);
 	destroy_patch(&scene->patch);
-	destroy_shader(&scene->shader);
+
+	glDeleteVertexArrays(1, &scene->help_vao);
+	glDeleteBuffers(1, &scene->help_buffer);
 }
 
 /*****************************/
 void draw_scene(Scene* scene)
 {
-	/* Setup shader */
-	glUseProgram(scene->shader.program);
+	/* Setup patch shader */
+	glEnable(GL_DEPTH_TEST);
+	glUseProgram(scene->patch_shader.program);
 
 	mat4 mvp;
 	glm_mat4_mul(scene->camera.pv, scene->patch.mod, mvp);
 
-	GLint loc = glGetUniformLocation(scene->shader.program, "MVP");
+	GLint loc = glGetUniformLocation(scene->patch_shader.program, "MVP");
 	glUniformMatrix4fv(loc, 1, GL_FALSE, (float*)mvp);
 
-	/* Draw */
+	/* Draw patch */
 	glBindVertexArray(scene->patch.vao);
 	size_t elems = 6 * (scene->patch.size-1) * (scene->patch.size-1);
 	glDrawElements(GL_TRIANGLES, elems, GL_UNSIGNED_INT, (GLvoid*)0);
+
+	/* Setup helper geometry shader */
+	glDisable(GL_DEPTH_TEST);
+	glUseProgram(scene->help_shader.program);
+
+	loc = glGetUniformLocation(scene->help_shader.program, "MVP");
+	glUniformMatrix4fv(loc, 1, GL_FALSE, (float*)scene->camera.pv);
+
+	/* Draw helper geometry */
+	glBindVertexArray(scene->help_vao);
+	glDrawArrays(GL_LINE_LOOP, 0, 4);
+	glDrawArrays(GL_LINES, 4, 6);
 }
 
 /*****************************/

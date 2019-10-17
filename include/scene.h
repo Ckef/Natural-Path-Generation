@@ -3,14 +3,21 @@
 #define SCENE_H
 
 #include "cglm/cglm.h"
+#include "include.h"
 #include "patch.h"
 #include "shader.h"
 
 /* Define some scene values */
-#define PATCH_SIZE 100
-#define CAM_FOV    45.0f
-#define CAM_NEAR   0.1f
-#define CAM_FAR    1000.0f
+#define SHADER_DIR  "shaders/"
+#define PATCH_VERT  SHADER_DIR "gradient.vert"
+#define PATCH_FRAG  SHADER_DIR "gradient.frag"
+#define HELP_VERT   SHADER_DIR "color.vert"
+#define HELP_FRAG   SHADER_DIR "color.frag"
+
+#define PATCH_SIZE  101
+#define CAM_FOV     45.0f
+#define CAM_NEAR    0.1f
+#define CAM_FAR     1000.0f
 
 /* Camera definition */
 typedef struct
@@ -26,7 +33,11 @@ typedef struct
 {
 	Camera camera;
 	Patch  patch;
-	Shader shader;
+	Shader patch_shader;
+
+	GLuint help_vao;
+	GLuint help_buffer;
+	Shader help_shader;
 
 	/* Camera movements */
 	float cam_angle;

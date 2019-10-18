@@ -1,63 +1,9 @@
 
-#include "include.h"
+#include "deps.h"
+#include "generators.h"
 #include "output.h"
 #include "scene.h"
-#include <math.h>
 #include <stdlib.h>
-#include <time.h>
-
-/*****************************/
-static int populate(unsigned int size, float* data, void* opt)
-{
-	/* Make a plane with noise ranging from 0 to 1 */
-	for(unsigned int i = 0; i < size * size; ++i)
-		data[i] = rand() / (float)RAND_MAX;
-
-	return 1;
-}
-
-/*****************************/
-static void set_camera(Scene* scene, double dTime)
-{
-	glm_mat4_identity(scene->camera.view);
-
-	vec3 pos;
-	vec3 x    = {1,0,0};
-	vec3 y    = {0,1,0};
-	vec3 z    = {0,0,1};
-	vec3 back = {0,0,-40};
-	vec3 down = {0,-40,0};
-	vec3 cent = {(PATCH_SIZE-1)/2.0f, (PATCH_SIZE-1)/2.0f, 0};
-
-	/* Update angle */
-	scene->cam_angle += dTime * scene->cam_rotating;
-
-	/* Rotate camera down a bit, so it looks down at the patch */
-	glm_rotate(scene->camera.view, GLM_PI_4 * 0.5f, x);
-	/* Move camera back a bit */
-	glm_translate(scene->camera.view, back);
-	/* Move camera up a bit */
-	glm_translate(scene->camera.view, down);
-	/* Rotate scene so camera is looking at patch */
-	glm_rotate(scene->camera.view, GLM_PI_4, y);
-	/* Rotate scene so y is up */
-	glm_rotate(scene->camera.view, -GLM_PI_2, x);
-
-	/* Translate patch back to its original position */
-	glm_translate(scene->camera.view, cent);
-	/* Rotate patch around 0,0,0 */
-	glm_rotate(scene->camera.view, scene->cam_angle, z);
-	/* Translate center of patch to 0,0,0 */
-	glm_vec3_negate(cent);
-	glm_translate(scene->camera.view, cent);
-
-	/* Translate to camera position */
-	glm_vec3_negate_to(scene->cam_position, pos);
-	glm_translate(scene->camera.view, pos);
-
-	/* Don't forget to update the pv matrix */
-	glm_mat4_mul(scene->camera.proj, scene->camera.view, scene->camera.pv);
-}
 
 /*****************************/
 static int add_patch(Scene* scene, PatchGenerator generator)
@@ -82,7 +28,7 @@ static int add_patch(Scene* scene, PatchGenerator generator)
 	}
 
 	/* Set its position to the current selection */
-	glm_mat4_copy(scene->help_mod, new[scene->num_patches].mod);
+	glm_vec3_copy(scene->help_pos, new[scene->num_patches].pos);
 
 	/* Populate the new patch */
 	if(!populate_patch(new + scene->num_patches, generator, NULL))
@@ -96,6 +42,61 @@ static int add_patch(Scene* scene, PatchGenerator generator)
 	++scene->num_patches;
 
 	return 1;
+}
+
+/*****************************/
+static void update_camera(Scene* scene, double dTime)
+{
+	glm_mat4_identity(scene->camera.view);
+
+	vec3 mov;
+	vec3 x    = {1,0,0};
+	vec3 y    = {0,1,0};
+	vec3 z    = {0,0,1};
+	vec3 back = {0,0,-40};
+	vec3 down = {0,-40,0};
+	vec3 cent = {(PATCH_SIZE-1)/2.0f, (PATCH_SIZE-1)/2.0f, 0};
+
+	/* Update position */
+	glm_vec3_copy(scene->cam_dest, mov);
+	glm_vec3_sub(mov, scene->cam_pos, mov);
+	float ml = glm_vec3_norm(mov);
+
+	if(ml < CAM_NEAR) /* yeh I use CAM_NEAR as distance cutoff */
+		glm_vec3_copy(scene->cam_dest, scene->cam_pos);
+	else if(CAM_SPEED * dTime < ml)
+	{
+		glm_vec3_scale(mov, CAM_SPEED * dTime / ml, mov);
+		glm_vec3_add(scene->cam_pos, mov, scene->cam_pos);
+	}
+
+	/* Update angle */
+	scene->cam_angle += dTime * scene->cam_rotating;
+
+	/* Rotate camera down a bit, so it looks down at the patch */
+	glm_rotate(scene->camera.view, GLM_PI_4 * 0.5f, x);
+	/* Move camera back a bit */
+	glm_translate(scene->camera.view, back);
+	/* Move camera up a bit */
+	glm_translate(scene->camera.view, down);
+	/* Rotate scene so camera is looking at patch */
+	glm_rotate(scene->camera.view, GLM_PI_4, y);
+	/* Rotate scene so y is up */
+	glm_rotate(scene->camera.view, -GLM_PI_2, x);
+
+	/* Translate patch back to its original position */
+	glm_translate(scene->camera.view, cent);
+	/* Rotate patch around 0,0,0 */
+	glm_rotate(scene->camera.view, scene->cam_angle, z);
+	/* Translate center of patch to 0,0,0 */
+	glm_vec3_negate(cent);
+	glm_translate(scene->camera.view, cent);
+	/* Translate to camera position */
+	glm_vec3_negate_to(scene->cam_pos, mov);
+	glm_translate(scene->camera.view, mov);
+
+	/* Don't forget to update the pv matrix */
+	glm_mat4_mul(scene->camera.proj, scene->camera.view, scene->camera.pv);
 }
 
 /*****************************/
@@ -115,18 +116,21 @@ int create_scene(Scene* scene)
 		return 0;
 	}
 
+	/* Setup camera */
+	/* The set_camera takes care of the view and pv matrices */
+	glm_mat4_identity(scene->camera.proj);
+	glm_vec3_zero(scene->cam_dest);
+	glm_vec3_zero(scene->cam_pos);
+	scene->cam_rotating = 0;
+	scene->cam_angle = 0.0f;
+	update_camera(scene, 0.0);
+
 	/* Create the first patch */
-	/* Make sure to initialize the helper model matrix here */
-	glm_mat4_identity(scene->help_mod);
+	/* Make sure to initialize the helper position here */
+	glm_vec3_zero(scene->help_pos);
 	scene->patches = NULL;
 	scene->num_patches = 0;
-
-	if(!add_patch(scene, populate))
-	{
-		destroy_shader(&scene->patch_shader);
-		destroy_shader(&scene->help_shader);
-		return 0;
-	}
+	add_patch(scene, gen_white_noise);
 
 	/* Create helper geometry */
 	/* Contains a square to indicate the selected patch */
@@ -164,15 +168,6 @@ int create_scene(Scene* scene)
 	glVertexAttribPointer(
 		1, 3, GL_FLOAT, GL_FALSE, attrSize * 2, (GLvoid*)(uintptr_t)attrSize);
 
-	/* Setup camera */
-	/* The set_camera takes care of the view and pv matrices */
-	glm_mat4_identity(scene->camera.proj);
-	glm_vec3_zero(scene->cam_position);
-	scene->cam_angle = 0.0f;
-	scene->cam_rotating = 0;
-	scene->cam_move = 0;
-	set_camera(scene, 0.0);
-
 	return 1;
 }
 
@@ -207,7 +202,7 @@ void draw_scene(Scene* scene)
 	size_t p;
 	for(p = 0; p < scene->num_patches; ++p)
 	{
-		glm_mat4_mul(scene->camera.pv, scene->patches[p].mod, mvp);
+		glm_translate_to(scene->camera.pv, scene->patches[p].pos, mvp);
 		glUniformMatrix4fv(loc, 1, GL_FALSE, (float*)mvp);
 
 		/* Draw it, this assumes the above work is done, which it is :) */
@@ -219,7 +214,7 @@ void draw_scene(Scene* scene)
 	glUseProgram(scene->help_shader.program);
 	loc = glGetUniformLocation(scene->help_shader.program, "MVP");
 
-	glm_mat4_mul(scene->camera.pv, scene->help_mod, mvp);
+	glm_translate_to(scene->camera.pv, scene->help_pos, mvp);
 	glUniformMatrix4fv(loc, 1, GL_FALSE, (float*)mvp);
 
 	/* Draw helper geometry */
@@ -231,10 +226,15 @@ void draw_scene(Scene* scene)
 /*****************************/
 void update_scene(Scene* scene, double dTime)
 {
-	if(scene->cam_move || scene->cam_rotating)
-		set_camera(scene, dTime);
-
-	scene->cam_move = 0;
+	if(
+		/* If the camera is moving or rotating, update it */
+		scene->cam_dest[0] != scene->cam_pos[0] ||
+		scene->cam_dest[1] != scene->cam_pos[1] ||
+		scene->cam_dest[2] != scene->cam_pos[2] ||
+		scene->cam_rotating)
+	{
+		update_camera(scene, dTime);
+	}
 }
 
 /*****************************/
@@ -260,25 +260,25 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 
 	/* Move the camera */
 	if(key == GLFW_KEY_W && action == GLFW_PRESS)
-		scene->cam_position[1] += PATCH_SIZE-1, scene->cam_move = 1;
+		scene->cam_dest[1] += PATCH_SIZE-1;
 	if(key == GLFW_KEY_S && action == GLFW_PRESS)
-		scene->cam_position[1] -= PATCH_SIZE-1, scene->cam_move = 1;
+		scene->cam_dest[1] -= PATCH_SIZE-1;
 	if(key == GLFW_KEY_A && action == GLFW_PRESS)
-		scene->cam_position[0] -= PATCH_SIZE-1, scene->cam_move = 1;
+		scene->cam_dest[0] -= PATCH_SIZE-1;
 	if(key == GLFW_KEY_D && action == GLFW_PRESS)
-		scene->cam_position[0] += PATCH_SIZE-1, scene->cam_move = 1;
+		scene->cam_dest[0] += PATCH_SIZE-1;
 
 	/* Move the helper geometry */
 	if(key == GLFW_KEY_UP && action == GLFW_PRESS)
-		glm_translate_y(scene->help_mod, PATCH_SIZE-1);
+		scene->help_pos[1] += PATCH_SIZE-1;
 	if(key == GLFW_KEY_DOWN && action == GLFW_PRESS)
-		glm_translate_y(scene->help_mod, -(PATCH_SIZE-1));
+		scene->help_pos[1] -= PATCH_SIZE-1;
 	if(key == GLFW_KEY_LEFT && action == GLFW_PRESS)
-		glm_translate_x(scene->help_mod, -(PATCH_SIZE-1));
+		scene->help_pos[0] -= PATCH_SIZE-1;
 	if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
-		glm_translate_x(scene->help_mod, PATCH_SIZE-1);
+		scene->help_pos[0] += PATCH_SIZE-1;
 
 	/* Add a new patch */
 	if(key == GLFW_KEY_ENTER && action == GLFW_PRESS)
-		add_patch(scene, populate);
+		add_patch(scene, gen_white_noise);
 }

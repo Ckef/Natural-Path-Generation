@@ -2,8 +2,6 @@
 #ifndef OUTPUT_H
 #define OUTPUT_H
 
-#include "include.h"
-
 /**
  * Outputs a string to the output system.
  *

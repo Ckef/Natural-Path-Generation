@@ -2,8 +2,7 @@
 #ifndef SCENE_H
 #define SCENE_H
 
-#include "cglm/cglm.h"
-#include "include.h"
+#include "deps.h"
 #include "patch.h"
 #include "shader.h"
 
@@ -19,6 +18,7 @@
 #define CAM_FOV     45.0f
 #define CAM_NEAR    0.1f
 #define CAM_FAR     1000.0f
+#define CAM_SPEED   120
 
 /* Camera definition */
 typedef struct
@@ -35,18 +35,19 @@ typedef struct
 	Camera camera;
 	Patch* patches;
 	size_t num_patches;
+	Shader patch_shader;
 
-	mat4   help_mod; /* Model matrix of the helper graphics */
+	/* Selection (helper) graphics */
+	vec3   help_pos;
 	GLuint help_vao;
 	GLuint help_buffer;
 	Shader help_shader;
-	Shader patch_shader;
 
 	/* Camera movements */
-	vec3  cam_position;
-	float cam_angle;
+	vec3  cam_dest;
+	vec3  cam_pos;
 	int   cam_rotating; /* -1, 0, 1 */
-	int   cam_move;     /* Non-zero if position changed */
+	float cam_angle;
 
 } Scene;
 

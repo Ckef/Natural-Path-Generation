@@ -46,6 +46,7 @@ LFLAGS = -lglfw3 -lX11 -lGL -pthread -lm -ldl
 # Creation
 $(OUT):
 	@mkdir -p $(OUT)
+	@mkdir -p $(OUT)/generators
 
 # Cleaning
 clean:
@@ -56,7 +57,8 @@ clean:
 # Builds
 
 HEADERS = \
- include/include.h \
+ include/deps.h \
+ include/generators.h \
  include/output.h \
  include/patch.h \
  include/scene.h \
@@ -64,6 +66,7 @@ HEADERS = \
 
 OBJS = \
  $(OUT)/glad.o \
+ $(OUT)/generators/noise.o \
  $(OUT)/output.o \
  $(OUT)/patch.o \
  $(OUT)/scene.o \

@@ -2,7 +2,7 @@
 #ifndef SHADER_H
 #define SHADER_H
 
-#include "include.h"
+#include "deps.h"
 
 /* Shader definition */
 typedef struct

@@ -1,5 +1,5 @@
 
-#include "include.h"
+#include "deps.h"
 #include "output.h"
 #include "patch.h"
 #include <stdlib.h>
@@ -9,7 +9,7 @@ int create_patch(Patch* patch, unsigned int size)
 {
 	/* Allocate CPU memory */
 	size_t vertSize = sizeof(float) * size * size;
-	glm_mat4_identity(patch->mod);
+	glm_vec3_zero(patch->pos);
 	patch->size = size;
 	patch->data = malloc(vertSize);
 

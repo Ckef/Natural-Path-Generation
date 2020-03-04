@@ -2,6 +2,7 @@
 #include "deps.h"
 #include "output.h"
 #include "scene.h"
+#include <stdlib.h>
 
 /* Scene to forward input callbacks to */
 static Scene* active_scene = NULL;
@@ -84,8 +85,12 @@ int main(int argc, char* argv[])
 	glfwSetCursorPosCallback(win, mouse_pos_callback);
 
 	/* Create a scene */
+	/* First see if an input patch size was given */
+	unsigned int pSize = 0;
+	if(argc > 1) pSize = atoi(argv[1]);
+
 	Scene scene;
-	if(!create_scene(&scene))
+	if(!create_scene(&scene, pSize))
 	{
 		throw_error("Could not create a scene.");
 		goto terminate;

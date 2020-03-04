@@ -21,7 +21,7 @@ static int add_patch(Scene* scene, PatchGenerator generator)
 	scene->patches = new;
 
 	/* Create a new patch */
-	if(!create_patch(new + scene->num_patches, PATCH_SIZE))
+	if(!create_patch(new + scene->num_patches, scene->patch_size))
 	{
 		throw_error("Could not create a new patch for scene.");
 		return 0;
@@ -55,7 +55,7 @@ static void update_camera(Scene* scene, double dTime)
 	vec3 z    = {0,0,1};
 	vec3 back = {0,0,-40};
 	vec3 down = {0,-40,0};
-	vec3 cent = {(PATCH_SIZE-1)/2.0f, (PATCH_SIZE-1)/2.0f, 0};
+	vec3 cent = {(scene->patch_size-1)/2.0f, (scene->patch_size-1)/2.0f, 0};
 
 	/* Update position */
 	glm_vec3_copy(scene->cam_dest, mov);
@@ -100,8 +100,11 @@ static void update_camera(Scene* scene, double dTime)
 }
 
 /*****************************/
-int create_scene(Scene* scene)
+int create_scene(Scene* scene, unsigned int patchSize)
 {
+	if(patchSize < 2) patchSize = DEF_PATCH_SIZE;
+	scene->patch_size = patchSize;
+
 	/* Load shaders */
 	if(!create_shader(&scene->patch_shader, PATCH_VERT, PATCH_FRAG))
 	{
@@ -136,10 +139,10 @@ int create_scene(Scene* scene)
 	/* Contains a square to indicate the selected patch */
 	/* Plus the axes of the coordinate system */
 	float help_geom[] = {
-		0,            0,            0, .5f, .5f, .5f,
-		PATCH_SIZE-1, 0,            0, .5f, .5f, .5f,
-		PATCH_SIZE-1, PATCH_SIZE-1, 0, .5f, .5f, .5f,
-		0,            PATCH_SIZE-1, 0, .5f, .5f, .5f,
+		0,           0,           0, .5f, .5f, .5f,
+		patchSize-1, 0,           0, .5f, .5f, .5f,
+		patchSize-1, patchSize-1, 0, .5f, .5f, .5f,
+		0,           patchSize-1, 0, .5f, .5f, .5f,
 
 		/* X axis */
 		0,         0,         0,         1, 0, 0,
@@ -260,23 +263,23 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 
 	/* Move the camera */
 	if(key == GLFW_KEY_W && action == GLFW_PRESS)
-		scene->cam_dest[1] += PATCH_SIZE-1;
+		scene->cam_dest[1] += scene->patch_size-1;
 	if(key == GLFW_KEY_S && action == GLFW_PRESS)
-		scene->cam_dest[1] -= PATCH_SIZE-1;
+		scene->cam_dest[1] -= scene->patch_size-1;
 	if(key == GLFW_KEY_A && action == GLFW_PRESS)
-		scene->cam_dest[0] -= PATCH_SIZE-1;
+		scene->cam_dest[0] -= scene->patch_size-1;
 	if(key == GLFW_KEY_D && action == GLFW_PRESS)
-		scene->cam_dest[0] += PATCH_SIZE-1;
+		scene->cam_dest[0] += scene->patch_size-1;
 
 	/* Move the helper geometry */
 	if(key == GLFW_KEY_UP && action == GLFW_PRESS)
-		scene->help_pos[1] += PATCH_SIZE-1;
+		scene->help_pos[1] += scene->patch_size-1;
 	if(key == GLFW_KEY_DOWN && action == GLFW_PRESS)
-		scene->help_pos[1] -= PATCH_SIZE-1;
+		scene->help_pos[1] -= scene->patch_size-1;
 	if(key == GLFW_KEY_LEFT && action == GLFW_PRESS)
-		scene->help_pos[0] -= PATCH_SIZE-1;
+		scene->help_pos[0] -= scene->patch_size-1;
 	if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
-		scene->help_pos[0] += PATCH_SIZE-1;
+		scene->help_pos[0] += scene->patch_size-1;
 
 	/* Add a new patch */
 	if(key == GLFW_KEY_ENTER && action == GLFW_PRESS)

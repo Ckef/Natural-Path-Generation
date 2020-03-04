@@ -13,12 +13,12 @@
 #define HELP_VERT   SHADER_DIR "color.vert"
 #define HELP_FRAG   SHADER_DIR "color.frag"
 
-#define PATCH_SIZE  101
-#define AXES_SIZE   16
-#define CAM_FOV     45.0f
-#define CAM_NEAR    0.1f
-#define CAM_FAR     1000.0f
-#define CAM_SPEED   120
+#define DEF_PATCH_SIZE  129 /* 2^N+1 with N=7, that's 128 tiles */
+#define AXES_SIZE       16
+#define CAM_FOV         45.0f
+#define CAM_NEAR        0.1f
+#define CAM_FAR         1000.0f
+#define CAM_SPEED       120
 
 /* Camera definition */
 typedef struct
@@ -32,10 +32,11 @@ typedef struct
 /* Scene deinition */
 typedef struct
 {
-	Camera camera;
-	Patch* patches;
-	size_t num_patches;
-	Shader patch_shader;
+	Camera       camera;
+	Patch*       patches;
+	size_t       num_patches;
+	unsigned int patch_size;
+	Shader       patch_shader;
 
 	/* Selection (helper) graphics */
 	vec3   help_pos;
@@ -54,9 +55,11 @@ typedef struct
 /**
  * Creates a new scene.
  *
- * @return Zero if the scene creation failed.
+ * @param  patchSize  Width and height of all patches in vertices.
+ *                    Set to DEF_PATCH_SIZE if value < 2.
+ * @return            Zero if the scene creation failed.
  */
-int create_scene(Scene* scene);
+int create_scene(Scene* scene, unsigned int patchSize);
 
 /**
  * Destroys a scene.

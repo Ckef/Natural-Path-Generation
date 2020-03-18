@@ -47,14 +47,15 @@ static int add_patch(Scene* scene, PatchGenerator generator)
 /*****************************/
 static void update_camera(Scene* scene, double dTime)
 {
+	/* Scale camera position and speed according to patch size */
+	float scale = (float)scene->patch_size / (float)DEF_PATCH_SIZE;
 	glm_mat4_identity(scene->camera.view);
 
 	vec3 mov;
 	vec3 x    = {1,0,0};
 	vec3 y    = {0,1,0};
 	vec3 z    = {0,0,1};
-	vec3 back = {0,0,-40};
-	vec3 down = {0,-40,0};
+	vec3 back = {0,-40 * scale, -40 * scale};
 	vec3 cent = {(scene->patch_size-1)/2.0f, (scene->patch_size-1)/2.0f, 0};
 
 	/* Update position */
@@ -62,11 +63,11 @@ static void update_camera(Scene* scene, double dTime)
 	glm_vec3_sub(mov, scene->cam_pos, mov);
 	float ml = glm_vec3_norm(mov);
 
-	if(ml < CAM_NEAR) /* yeh I use CAM_NEAR as distance cutoff */
+	if(CAM_SPEED * scale * dTime >= ml)
 		glm_vec3_copy(scene->cam_dest, scene->cam_pos);
-	else if(CAM_SPEED * dTime < ml)
+	else
 	{
-		glm_vec3_scale(mov, CAM_SPEED * dTime / ml, mov);
+		glm_vec3_scale(mov, CAM_SPEED * scale * dTime / ml, mov);
 		glm_vec3_add(scene->cam_pos, mov, scene->cam_pos);
 	}
 
@@ -75,10 +76,8 @@ static void update_camera(Scene* scene, double dTime)
 
 	/* Rotate camera down a bit, so it looks down at the patch */
 	glm_rotate(scene->camera.view, GLM_PI_4 * 0.5f, x);
-	/* Move camera back a bit */
+	/* Move camera back and up a bit */
 	glm_translate(scene->camera.view, back);
-	/* Move camera up a bit */
-	glm_translate(scene->camera.view, down);
 	/* Rotate scene so camera is looking at patch */
 	glm_rotate(scene->camera.view, GLM_PI_4, y);
 	/* Rotate scene so y is up */
@@ -135,6 +134,9 @@ int create_scene(Scene* scene, unsigned int patchSize)
 	scene->num_patches = 0;
 	add_patch(scene, gen_white_noise);
 
+	/* Scale axes size according to patch size */
+	float aSize = AXES_SIZE * (float)scene->patch_size / (float)DEF_PATCH_SIZE;
+
 	/* Create helper geometry */
 	/* Contains a square to indicate the selected patch */
 	/* Plus the axes of the coordinate system */
@@ -145,14 +147,14 @@ int create_scene(Scene* scene, unsigned int patchSize)
 		0,           patchSize-1, 0, .5f, .5f, .5f,
 
 		/* X axis */
-		0,         0,         0,         1, 0, 0,
-		AXES_SIZE, 0,         0,         1, 0, 0,
+		0,     0,     0,     1, 0, 0,
+		aSize, 0,     0,     1, 0, 0,
 		/* Y axis */
-		0,         0,         0,         0, 1, 0,
-		0,         AXES_SIZE, 0,         0, 1, 0,
+		0,     0,     0,     0, 1, 0,
+		0,     aSize, 0,     0, 1, 0,
 		/* Z axis */
-		0,         0,         0,         0, 0, 1,
-		0,         0,         AXES_SIZE, 0, 0, 1
+		0,     0,     0,     0, 0, 1,
+		0,     0,     aSize, 0, 0, 1
 	};
 
 	glGenVertexArrays(1, &scene->help_vao);
@@ -194,14 +196,13 @@ void destroy_scene(Scene* scene)
 /*****************************/
 void draw_scene(Scene* scene)
 {
-	mat4 mvp;
-
 	/* Setup patch shader */
 	glEnable(GL_DEPTH_TEST);
 	glUseProgram(scene->patch_shader.program);
 	GLint loc = glGetUniformLocation(scene->patch_shader.program, "MVP");
 
 	/* Loop over all patches */
+	mat4 mvp;
 	size_t p;
 	for(p = 0; p < scene->num_patches; ++p)
 	{
@@ -243,7 +244,7 @@ void update_scene(Scene* scene, double dTime)
 /*****************************/
 void scene_framebuffer_size_callback(Scene* scene, int width, int height)
 {
-	float aspect = (float)width/(float)height;
+	float aspect = (float)width / (float)height;
 
 	/* Calculate new projection matrix and update pv */
 	glm_perspective(CAM_FOV, aspect, CAM_NEAR, CAM_FAR, scene->camera.proj);

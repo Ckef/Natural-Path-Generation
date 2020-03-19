@@ -42,7 +42,7 @@ int gen_mpd(unsigned int size, float* data, void* opt)
 		/* Iterate over all diamonds */
 		unsigned int i;
 		for(i = 0, c = 0; c < size; c += step>>1, i ^= 1)
-			for(r = i ? 0 : step/2; r < size; r += step)
+			for(r = i ? 0 : step>>1; r < size; r += step)
 			{
 				unsigned int le = (c-(step>>1)) * size + r;
 				unsigned int ri = (c+(step>>1)) * size + r;

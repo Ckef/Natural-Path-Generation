@@ -49,6 +49,8 @@ static int add_patch(Scene* scene, PatchGenerator generator)
 	/* The reallocation doesn't matter, as it's based on this number */
 	++scene->num_patches;
 
+	output("Patch was created succesfully.");
+
 	return 1;
 }
 
@@ -130,12 +132,10 @@ int create_scene(Scene* scene, unsigned int patchSize)
 	scene->cam_angle = 0.0f;
 	update_camera(scene, 0.0);
 
-	/* Create the first patch */
 	/* Make sure to initialize the helper position here */
 	glm_vec3_zero(scene->help_pos);
 	scene->patches = NULL;
 	scene->num_patches = 0;
-	add_patch(scene, gen_mpd);
 
 	/* Create helper geometry */
 	/* Contains a square to indicate the selected patch */

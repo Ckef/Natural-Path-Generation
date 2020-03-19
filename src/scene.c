@@ -6,6 +6,14 @@
 #include <stdlib.h>
 
 /*****************************/
+static inline float get_scale(Scene* scene)
+{
+	/* Returns the scale of the patches relative to the default size */
+	/* Useful for scaling things when the patch size changes */
+	return (float)scene->patch_size / (float)DEF_PATCH_SIZE;
+}
+
+/*****************************/
 static int add_patch(Scene* scene, PatchGenerator generator)
 {
 	/* Allocate more memory */
@@ -48,7 +56,7 @@ static int add_patch(Scene* scene, PatchGenerator generator)
 static void update_camera(Scene* scene, double dTime)
 {
 	/* Scale camera position and speed according to patch size */
-	float scale = (float)scene->patch_size / (float)DEF_PATCH_SIZE;
+	float scale = get_scale(scene);
 	glm_mat4_identity(scene->camera.view);
 
 	vec3 mov;
@@ -83,13 +91,8 @@ static void update_camera(Scene* scene, double dTime)
 	/* Rotate scene so y is up */
 	glm_rotate(scene->camera.view, -GLM_PI_2, x);
 
-	/* Translate patch back to its original position */
-	glm_translate(scene->camera.view, cent);
-	/* Rotate patch around 0,0,0 */
-	glm_rotate(scene->camera.view, scene->cam_angle, z);
-	/* Translate center of patch to 0,0,0 */
-	glm_vec3_negate(cent);
-	glm_translate(scene->camera.view, cent);
+	/* Rotate around center of the patch we're looking at */
+	glm_rotate_at(scene->camera.view, cent, scene->cam_angle, z);
 	/* Translate to camera position */
 	glm_vec3_negate_to(scene->cam_pos, mov);
 	glm_translate(scene->camera.view, mov);
@@ -134,12 +137,11 @@ int create_scene(Scene* scene, unsigned int patchSize)
 	scene->num_patches = 0;
 	add_patch(scene, gen_mpd);
 
-	/* Scale axes size according to patch size */
-	float aSize = AXES_SIZE * (float)scene->patch_size / (float)DEF_PATCH_SIZE;
-
 	/* Create helper geometry */
 	/* Contains a square to indicate the selected patch */
 	/* Plus the axes of the coordinate system */
+	/* Scale axes size according to patch size */
+	float aSize = AXES_SIZE * get_scale(scene);
 	float help_geom[] = {
 		0,           0,           0, .5f, .5f, .5f,
 		patchSize-1, 0,           0, .5f, .5f, .5f,
@@ -202,11 +204,17 @@ void draw_scene(Scene* scene)
 	GLint loc = glGetUniformLocation(scene->patch_shader.program, "MVP");
 
 	/* Loop over all patches */
+	vec3 scale = {1, 1, PATCH_HEIGHT * get_scale(scene)};
 	mat4 mvp;
+
 	size_t p;
 	for(p = 0; p < scene->num_patches; ++p)
 	{
+		/* The height (z-coord) of all patches is in [0,1] */
+		/* So move it down 0.5 and scale it */
 		glm_translate_to(scene->camera.pv, scene->patches[p].pos, mvp);
+		glm_scale(mvp, scale);
+		glm_translate_z(mvp, -.5f);
 		glUniformMatrix4fv(loc, 1, GL_FALSE, (float*)mvp);
 
 		/* Draw it, this assumes the above work is done, which it is :) */

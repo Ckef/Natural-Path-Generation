@@ -10,7 +10,7 @@ typedef struct
 	vec3 pos; /* Position, modify at free will */
 
 	unsigned int size; /* Width and height in vertices (always a square) */
-	float*       data; /* Column-major */
+	float*       data; /* Column-major, generally speaking values are in [0,1] */
 	GLuint       vao;
 	GLuint       vertices;
 	GLuint       indices;

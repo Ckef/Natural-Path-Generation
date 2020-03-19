@@ -14,6 +14,7 @@
 #define HELP_FRAG   SHADER_DIR "color.frag"
 
 #define DEF_PATCH_SIZE  129 /* 2^N+1 with N=7, that's 128 tiles */
+#define PATCH_HEIGHT    25  /* Scaled according to patch size */
 #define AXES_SIZE       16  /* Scaled according to patch size */
 #define CAM_FOV         45.0f
 #define CAM_NEAR        0.1f

@@ -66,6 +66,7 @@ HEADERS = \
 
 OBJS = \
  $(OUT)/glad.o \
+ $(OUT)/generators/mpd.o \
  $(OUT)/generators/noise.o \
  $(OUT)/output.o \
  $(OUT)/patch.o \

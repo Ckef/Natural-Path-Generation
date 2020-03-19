@@ -132,7 +132,7 @@ int create_scene(Scene* scene, unsigned int patchSize)
 	glm_vec3_zero(scene->help_pos);
 	scene->patches = NULL;
 	scene->num_patches = 0;
-	add_patch(scene, gen_white_noise);
+	add_patch(scene, gen_mpd);
 
 	/* Scale axes size according to patch size */
 	float aSize = AXES_SIZE * (float)scene->patch_size / (float)DEF_PATCH_SIZE;
@@ -284,5 +284,5 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 
 	/* Add a new patch */
 	if(key == GLFW_KEY_ENTER && action == GLFW_PRESS)
-		add_patch(scene, gen_white_noise);
+		add_patch(scene, gen_mpd);
 }

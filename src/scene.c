@@ -1,6 +1,7 @@
 
 #include "deps.h"
 #include "generators.h"
+#include "modifiers.h"
 #include "output.h"
 #include "scene.h"
 #include <stdlib.h>
@@ -296,5 +297,8 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 
 	/* Add a new patch */
 	if(key == GLFW_KEY_ENTER && action == GLFW_PRESS)
-		add_patch(scene, gen_mpd, 0, NULL);
+	{
+		PatchModifier mods[] = { mod_flatten };
+		add_patch(scene, gen_mpd, 1, mods);
+	}
 }

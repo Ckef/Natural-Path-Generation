@@ -13,13 +13,8 @@ uniform mat4 MVP;
 
 void main()
 {
-	// Red goes   0 - 0 - 1
-	// Green goes 0 - 1 - 0
-	// Blue goes  1 - 0 - 0
-	color = vec3(
-		2 * clamp(pos.z - 0.5f, 0, 1),
-		1 - 2 * abs(pos.z - 0.5f),
-		2 * clamp(0.5f - pos.z, 0, 1));
+	// I like me some yellow terrain :)
+	color = vec3(0.8, 0.8, 0);
 
 	// Skip transforming the normal, the model matrix should be translation only anyway
 	normal = norm;

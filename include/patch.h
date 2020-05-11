@@ -28,6 +28,15 @@ typedef struct
 typedef int (*PatchGenerator)(unsigned int size, float* data, void* opt);
 
 /**
+ * Patch modifier.
+ *
+ * @param  size  Width and height of the patch in vertices.
+ * @param  data  Modifiable input data array of size * size length (column-major).
+ * @return       Zero if the modification failed for some reason.
+ */
+typedef int (*PatchModifier)(unsigned int size, float* data);
+
+/**
  * Creates a new patch of some specified size.
  *
  * @param  size  Width and height of the patch in vertices.
@@ -48,13 +57,20 @@ void destroy_patch(Patch* patch);
 void draw_patch(Patch* patch);
 
 /**
- * Populates the patch with vertex data given a generator.
+ * Populates the patch with vertex data given a generator and modifiers.
  *
- * @param  generator  Function that generates a terrain. 
+ * @param  generator  Function that generates a terrain.
  * @param  opt        Optional pointer to pass.
+ * @param  numMods    Number of modifiers passed.
+ * @param  mods       Array of numMods modifiers (can be NULL).
  * @return            Zero if population failed.
  */
-int populate_patch(Patch* patch, PatchGenerator generator, void* opt);
+int populate_patch(
+	Patch*         patch,
+	PatchGenerator generator,
+	void*          opt,
+	unsigned int   numMods,
+	PatchModifier* mods);
 
 
 #endif

@@ -95,7 +95,12 @@ void draw_patch(Patch* patch)
 }
 
 /*****************************/
-int populate_patch(Patch* patch, PatchGenerator generator, void* opt)
+int populate_patch(
+	Patch*         patch,
+	PatchGenerator generator,
+	void*          opt,
+	unsigned int   numMods,
+	PatchModifier* mods)
 {
 	/* Generate the terrain */
 	if(!generator(patch->size, patch->data, opt))
@@ -103,6 +108,15 @@ int populate_patch(Patch* patch, PatchGenerator generator, void* opt)
 		throw_error("Could not populate patch due to faulty generation.");
 		return 0;
 	}
+
+	/* Apply all modifiers in order */
+	unsigned int m;
+	for(m = 0; m < numMods; ++m)
+		if(!mods[m](patch->size, patch->data))
+		{
+			throw_error("Could not populate patch due to faulty modifier.");
+			return 0;
+		}
 
 	/* Temporary buffer to generate vertex data */
 	size_t vertSize = sizeof(float) * patch->size * patch->size * 6;

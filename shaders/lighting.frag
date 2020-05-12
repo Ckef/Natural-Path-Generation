@@ -8,7 +8,7 @@ in vec3 color;
 out vec4 FragColor;
 
 // Some lighting constants (maybe make m modifiable...)
-const vec3 LightDirection = vec3(0, 2, -1);
+const vec3 LightDirection = vec3(0.2, 2, -1);
 const float AmbientLight  = 0.2;
 
 void main()

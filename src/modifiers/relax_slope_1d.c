@@ -27,7 +27,7 @@ int mod_relax_slope_1d(unsigned int size, float* data, void* opt)
 			/* The current slope and the indices */
 			/* a is the lowest vertex, b the highest */
 			float s = mid[r+1] - mid[r];
-			int b = (s > 0);
+			int b = s > 0;
 			int a = 1-b;
 			s = b ? s : -s;
 

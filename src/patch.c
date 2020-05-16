@@ -98,7 +98,6 @@ void draw_patch(Patch* patch)
 int populate_patch(
 	Patch*         patch,
 	PatchGenerator generator,
-	unsigned int   numMods,
 	PatchModifier* mods,
 	void*          opt)
 {
@@ -111,7 +110,7 @@ int populate_patch(
 
 	/* Apply all modifiers in order */
 	unsigned int m;
-	for(m = 0; m < numMods; ++m)
+	for(m = 0; mods && mods[m]; ++m)
 		if(!mods[m](patch->size, patch->data, opt))
 		{
 			throw_error("Could not populate patch due to faulty modifier.");

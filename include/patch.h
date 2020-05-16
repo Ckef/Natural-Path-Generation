@@ -61,15 +61,13 @@ void draw_patch(Patch* patch);
  * Populates the patch with vertex data given a generator and modifiers.
  *
  * @param  generator  Function that generates a terrain.
- * @param  numMods    Number of modifiers passed.
- * @param  mods       Array of numMods modifiers (can be NULL).
+ * @param  mods       Array of numMods modifiers (can be NULL), last element must be NULL.
  * @param  opt        Optional pointer to pass to the generator and all modifiers.
  * @return            Zero if population failed.
  */
 int populate_patch(
 	Patch*         patch,
 	PatchGenerator generator,
-	unsigned int   numMods,
 	PatchModifier* mods,
 	void*          opt);
 

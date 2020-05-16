@@ -3,6 +3,11 @@
 #define MODIFIERS_H
 
 /**
+ * Simply outputs some statistics about the terrain.
+ */
+int mod_stats(unsigned int size, float* data, void* opt);
+
+/**
  * Flattens the terrain to 1D.
  * It copies the center (rounded down) column to all other columns.
  */

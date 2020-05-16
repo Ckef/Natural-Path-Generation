@@ -18,7 +18,6 @@ static inline float get_scale(Scene* scene)
 static int add_patch(
 	Scene*         scene,
 	PatchGenerator generator,
-	unsigned int   numMods,
 	PatchModifier* mods)
 {
 	/* Allocate more memory */
@@ -44,7 +43,7 @@ static int add_patch(
 	glm_vec3_copy(scene->help_pos, new[scene->num_patches].pos);
 
 	/* Populate the new patch */
-	if(!populate_patch(new + scene->num_patches, generator, numMods, mods, NULL))
+	if(!populate_patch(new + scene->num_patches, generator, mods, NULL))
 	{
 		throw_error("Population of newly created patch failed.");
 		return 0;
@@ -299,10 +298,14 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 	if(key == GLFW_KEY_ENTER && action == GLFW_PRESS)
 	{
 		PatchModifier mods[] = {
+			mod_flatten,
+			mod_stats,
 			mod_relax_slope_1d,
-			mod_flatten
+			mod_flatten,
+			mod_stats,
+			NULL
 		};
 
-		add_patch(scene, gen_mpd, 2, mods);
+		add_patch(scene, gen_mpd, mods);
 	}
 }

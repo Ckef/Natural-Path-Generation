@@ -98,9 +98,9 @@ void draw_patch(Patch* patch)
 int populate_patch(
 	Patch*         patch,
 	PatchGenerator generator,
-	void*          opt,
 	unsigned int   numMods,
-	PatchModifier* mods)
+	PatchModifier* mods,
+	void*          opt)
 {
 	/* Generate the terrain */
 	if(!generator(patch->size, patch->data, opt))
@@ -112,7 +112,7 @@ int populate_patch(
 	/* Apply all modifiers in order */
 	unsigned int m;
 	for(m = 0; m < numMods; ++m)
-		if(!mods[m](patch->size, patch->data))
+		if(!mods[m](patch->size, patch->data, opt))
 		{
 			throw_error("Could not populate patch due to faulty modifier.");
 			return 0;

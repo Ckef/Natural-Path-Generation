@@ -71,6 +71,7 @@ OBJS = \
  $(OUT)/generators/mpd.o \
  $(OUT)/generators/noise.o \
  $(OUT)/modifiers/flatten.o \
+ $(OUT)/modifiers/relax_slope_1d.o \
  $(OUT)/output.o \
  $(OUT)/patch.o \
  $(OUT)/scene.o \

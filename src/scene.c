@@ -44,7 +44,7 @@ static int add_patch(
 	glm_vec3_copy(scene->help_pos, new[scene->num_patches].pos);
 
 	/* Populate the new patch */
-	if(!populate_patch(new + scene->num_patches, generator, NULL, numMods, mods))
+	if(!populate_patch(new + scene->num_patches, generator, numMods, mods, NULL))
 	{
 		throw_error("Population of newly created patch failed.");
 		return 0;
@@ -298,7 +298,11 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 	/* Add a new patch */
 	if(key == GLFW_KEY_ENTER && action == GLFW_PRESS)
 	{
-		PatchModifier mods[] = { mod_flatten };
-		add_patch(scene, gen_mpd, 1, mods);
+		PatchModifier mods[] = {
+			mod_relax_slope_1d,
+			mod_flatten
+		};
+
+		add_patch(scene, gen_mpd, 2, mods);
 	}
 }

@@ -32,9 +32,10 @@ typedef int (*PatchGenerator)(unsigned int size, float* data, void* opt);
  *
  * @param  size  Width and height of the patch in vertices.
  * @param  data  Modifiable input data array of size * size length (column-major).
+ * @param  opt   Optional pointer to pass.
  * @return       Zero if the modification failed for some reason.
  */
-typedef int (*PatchModifier)(unsigned int size, float* data);
+typedef int (*PatchModifier)(unsigned int size, float* data, void* opt);
 
 /**
  * Creates a new patch of some specified size.
@@ -60,17 +61,17 @@ void draw_patch(Patch* patch);
  * Populates the patch with vertex data given a generator and modifiers.
  *
  * @param  generator  Function that generates a terrain.
- * @param  opt        Optional pointer to pass.
  * @param  numMods    Number of modifiers passed.
  * @param  mods       Array of numMods modifiers (can be NULL).
+ * @param  opt        Optional pointer to pass to the generator and all modifiers.
  * @return            Zero if population failed.
  */
 int populate_patch(
 	Patch*         patch,
 	PatchGenerator generator,
-	void*          opt,
 	unsigned int   numMods,
-	PatchModifier* mods);
+	PatchModifier* mods,
+	void*          opt);
 
 
 #endif

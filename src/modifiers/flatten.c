@@ -2,7 +2,7 @@
 #include <string.h>
 
 /*****************************/
-int mod_flatten(unsigned int size, float* data)
+int mod_flatten(unsigned int size, float* data, void* opt)
 {
 	/* Copy the center column to all other columns */
 	unsigned int mid = size >> 1;

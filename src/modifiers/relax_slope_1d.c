@@ -5,7 +5,7 @@
 
 /* Hardcoded slope constraint for now */
 #define MAX_SLOPE       0.005f
-#define MAX_ITERATIONS  UINT_MAX
+#define MAX_ITERATIONS  100000
 
 /*****************************/
 int mod_relax_slope_1d(unsigned int size, float* data, void* opt)
@@ -32,7 +32,10 @@ int mod_relax_slope_1d(unsigned int size, float* data, void* opt)
 			s = b ? s : -s;
 
 			/* Add epsilon to the comparison, otherwise it never exits */
-			if(s > MAX_SLOPE + FLT_EPSILON)
+			/* Note: 4 times epsilon, cause we divide the difference by 2 twice!? */
+			/* Note: this is probably way inaccurate */
+			/* TODO: find some accurate way to account for floating point errors */
+			if(s > MAX_SLOPE + FLT_EPSILON * 4)
 			{
 				/* We are now modifying, so add another iteration */
 				done = 0;

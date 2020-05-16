@@ -1,7 +1,11 @@
 
+#include "output.h"
+#include <float.h>
+#include <limits.h>
+
 /* Hardcoded slope constraint for now */
-#define MAX_SLOPE   0.005f
-#define ITERATIONS  5000
+#define MAX_SLOPE       0.005f
+#define MAX_ITERATIONS  UINT_MAX
 
 /*****************************/
 int mod_relax_slope_1d(unsigned int size, float* data, void* opt)
@@ -9,10 +13,13 @@ int mod_relax_slope_1d(unsigned int size, float* data, void* opt)
 	/* Only modify the center column */
 	float* mid = data + ((size >> 1) * size);
 
-	/* Apply the relaxation process for ITERATIONS times */
-	unsigned int i = ITERATIONS;
-	while(i--)
+	/* Count the number of iterations */
+	unsigned int i = 0;
+	while(i < MAX_ITERATIONS)
 	{
+		int done = 1;
+		++i;
+
 		/* Loop over all pairs of vertices */
 		unsigned int r;
 		for(r = 0; r < size-1; ++r)
@@ -24,8 +31,12 @@ int mod_relax_slope_1d(unsigned int size, float* data, void* opt)
 			int a = 1-b;
 			s = b ? s : -s;
 
-			if(s > MAX_SLOPE)
+			/* Add epsilon to the comparison, otherwise it never exits */
+			if(s > MAX_SLOPE + FLT_EPSILON)
 			{
+				/* We are now modifying, so add another iteration */
+				done = 0;
+
 				/* If the slope is too great, move a and b closer to each other */
 				/* Weigh the added difference by 1/2 */
 				/* This weight is so all vertex pairs can be done in parallel */
@@ -34,7 +45,12 @@ int mod_relax_slope_1d(unsigned int size, float* data, void* opt)
 				mid[r+b] -= move * .5f;
 			}
 		}
+
+		/* Exit if no changes were made */
+		if(done) break;
 	}
+
+	output("Slope relaxation took %u iterations.", i);
 
 	return 1;
 }

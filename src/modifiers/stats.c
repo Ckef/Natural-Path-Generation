@@ -8,21 +8,22 @@ static float max_slope_1d(unsigned int size, float* data)
 	/* Maximum 1D slope */
 	/* Not to confuse with the gradient */
 	/* To test the 1D version */
-	/* TODO: Does not test the boundaries */
 	float m = 0;
 	unsigned int c, r;
 	for(c = 0; c < size-1; ++c)
+		for(r = 0; r < size; ++r)
+		{
+			/* Get slope in x direction */
+			float s = data[(c+1) * size + r] - data[c * size + r];
+			m = s > 0 ? (s > m ? s : m) : (-s > m ? -s : m);
+		}
+
+	for(c = 0; c < size; ++c)
 		for(r = 0; r < size-1; ++r)
 		{
-			/* Get slope in both directions */
-			float s1 = data[c * size + r+1] - data[c * size + r];
-			s1 = s1 > 0 ? s1 : -s1;
-
-			float s2 = data[(c+1) * size + r] - data[c * size + r];
-			s2 = s2 > 0 ? s2 : -s2;
-
-			/* Get max slope */
-			m = s1 > s2 ? (s1 > m ? s1 : m) : (s2 > m ? s2 : m);
+			/* Get slope in y direction */
+			float s = data[c * size + r+1] - data[c * size + r];
+			m = s > 0 ? (s > m ? s : m) : (-s > m ? -s : m);
 		}
 
 	return m;
@@ -32,15 +33,15 @@ static float max_slope_1d(unsigned int size, float* data)
 static float max_slope(unsigned int size, float* data)
 {
 	/* Maximum 2D slope, i.e. the magnitude of the gradient vector */
-	/* TODO: Does not test the boundaries */
 	float m = 0;
 	unsigned int c, r;
-	for(c = 0; c < size-1; ++c)
-		for(r = 0; r < size-1; ++r)
+	for(c = 0; c < size; ++c)
+		for(r = 0; r < size; ++r)
 		{
 			/* Get the gradient */
-			float sx = data[(c+1) * size + r] - data[c * size + r];
-			float sy = data[c * size + r+1] - data[c * size + r];
+			/* If it is at the boundary, it gets the opposite neighbour */
+			float sx = data[(c == size-1 ? c-1 : c+1) * size + r] - data[c * size + r];
+			float sy = data[c * size + (r == size-1 ? r-1 : r+1)] - data[c * size + r];
 			float g = sqrtf(sx * sx + sy * sy);
 
 			m = g > m ? g : m;

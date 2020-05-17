@@ -73,15 +73,16 @@ int mod_relax_slope(unsigned int size, float* data, void* opt)
 		int done = 1;
 		++i;
 
-		/* Loop over all coordinates that have a neighbour above and below */
-		/* TODO: Does not consider the boundaries */
+		/* Loop over all vertices */
 		unsigned int c, r;
-		for(c = 0; c < size-1; ++c)
-			for(r = 0; r < size-1; ++r)
+		for(c = 0; c < size; ++c)
+			for(r = 0; r < size; ++r)
 			{
+				/* Get the vertex in question and its two neighbours */
+				/* If it is at the boundary, it gets the opposite neighbour */
 				float* x = data + (c * size + r);
-				float* xx = data + ((c+1) * size + r);
-				float* xy = data + (c * size + r+1);
+				float* xx = data + ((c == size-1 ? c-1 : c+1) * size + r);
+				float* xy = data + (c * size + (r == size-1 ? r-1 : r+1));
 
 				/* This scales gradient vector g by MaxSlope/|g| */
 				float sx = *xx - *x;
@@ -93,13 +94,15 @@ int mod_relax_slope(unsigned int size, float* data, void* opt)
 
 				/* This applies different scales to the delta x and delta y */
 				/* It retains the ratio of the two directional delta's squared */
-				/*float sx2 = (*xx - *x) * (*xx - *x);
+				/*
+				float sx2 = (*xx - *x) * (*xx - *x);
 				float sy2 = (*xy - *x) * (*xy - *x);
 				float a = sqrtf(sx2 / (sx2 + sy2));
 				float b = sqrtf(sy2 / (sx2 + sy2));
 
 				done &= move_slope(x, xx, MAX_SLOPE * a, .25f);
-				done &= move_slope(x, xy, MAX_SLOPE * b, .25f);*/
+				done &= move_slope(x, xy, MAX_SLOPE * b, .25f);
+				*/
 			}
 
 		/* Exit if no changes were made */

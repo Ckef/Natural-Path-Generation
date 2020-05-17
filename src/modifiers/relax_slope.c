@@ -10,6 +10,10 @@
 /*****************************/
 static unsigned int move_slope(float* p1, float* p2, float maxSlope, float weight)
 {
+	/* TODO: figure out what to do with weight, it appears to be faster if no weight? */
+	/* ???????? */
+	weight = 1;
+
 	/* The current slope and the indices */
 	/* a is the lowest vertex, b the highest */
 	float s = *p2 - *p1;

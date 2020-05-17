@@ -298,10 +298,13 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 	if(key == GLFW_KEY_ENTER && action == GLFW_PRESS)
 	{
 		PatchModifier mods[] = {
-			mod_flatten,
+			//mod_flatten,
+			//mod_stats,
+			//mod_relax_slope_1d,
+			//mod_flatten,
+			//mod_stats,
 			mod_stats,
-			mod_relax_slope_1d,
-			mod_flatten,
+			mod_relax_slope,
 			mod_stats,
 			NULL
 		};

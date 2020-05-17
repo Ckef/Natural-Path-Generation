@@ -19,5 +19,10 @@ int mod_flatten(unsigned int size, float* data, void* opt);
  */
 int mod_relax_slope_1d(unsigned int size, float* data, void* opt);
 
+/**
+ * Applies iterative relaxation to solve 2D gradient constraints.
+ */
+int mod_relax_slope(unsigned int size, float* data, void* opt);
+
 
 #endif

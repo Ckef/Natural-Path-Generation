@@ -37,16 +37,6 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 }
 
 /*****************************/
-static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
-{
-}
-
-/*****************************/
-static void mouse_pos_callback(GLFWwindow* window, double x, double y)
-{
-}
-
-/*****************************/
 int main(int argc, char* argv[])
 {
 	/* Initialize GLFW */
@@ -81,8 +71,6 @@ int main(int argc, char* argv[])
 	glfwSwapInterval(1);
 	glfwSetFramebufferSizeCallback(win, framebuffer_size_callback);
 	glfwSetKeyCallback(win, key_callback);
-	glfwSetMouseButtonCallback(win, mouse_button_callback);
-	glfwSetCursorPosCallback(win, mouse_pos_callback);
 
 	/* Create a scene */
 	/* First see if an input patch size was given */
@@ -115,14 +103,14 @@ int main(int argc, char* argv[])
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		draw_scene(&scene);
 
-		/* Swap buffers + process events */
-		glfwSwapBuffers(win);
-		glfwPollEvents();
-
 		/* Update scene */
 		double newTime = glfwGetTime();
 		update_scene(&scene, newTime - time);
 		time = newTime;
+
+		/* Process events + swap buffers */
+		glfwPollEvents();
+		glfwSwapBuffers(win);
 	}
 
 	/* Clean up the scene */

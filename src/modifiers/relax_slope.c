@@ -12,6 +12,7 @@ static unsigned int move_slope(float* p1, float* p2, float maxSlope, float weigh
 {
 	/* TODO: figure out what to do with weight, it appears to be faster if no weight? */
 	/* ???????? */
+	/* Oh this is probably because we're outputting to the same grid */
 	weight = 1;
 
 	/* The current slope and the indices */

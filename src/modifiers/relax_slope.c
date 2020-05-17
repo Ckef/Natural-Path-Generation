@@ -83,13 +83,23 @@ int mod_relax_slope(unsigned int size, float* data, void* opt)
 				float* xx = data + ((c+1) * size + r);
 				float* xy = data + (c * size + r+1);
 
-				float sx2 = (*xx - *x) * (*xx - *x);
+				/* This scales gradient vector g by MaxSlope/|g| */
+				float sx = *xx - *x;
+				float sy = *xy - *x;
+				float g = MAX_SLOPE / sqrtf(sx*sx + sy*sy);
+
+				done &= move_slope(x, xx, (sx > 0 ? sx : -sx) * g, .25f);
+				done &= move_slope(x, xy, (sy > 0 ? sy : -sy) * g, .25f);
+
+				/* This applies different scales to the delta x and delta y */
+				/* It retains the ratio of the two directional delta's squared */
+				/*float sx2 = (*xx - *x) * (*xx - *x);
 				float sy2 = (*xy - *x) * (*xy - *x);
 				float a = sqrtf(sx2 / (sx2 + sy2));
 				float b = sqrtf(sy2 / (sx2 + sy2));
 
 				done &= move_slope(x, xx, MAX_SLOPE * a, .25f);
-				done &= move_slope(x, xy, MAX_SLOPE * b, .25f);
+				done &= move_slope(x, xy, MAX_SLOPE * b, .25f);*/
 			}
 
 		/* Exit if no changes were made */

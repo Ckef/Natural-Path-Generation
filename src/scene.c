@@ -7,14 +7,6 @@
 #include <stdlib.h>
 
 /*****************************/
-static inline float get_scale(Scene* scene)
-{
-	/* Returns the scale of the patches relative to the default size */
-	/* Useful for scaling things when the patch size changes */
-	return (float)scene->patch_size / (float)DEF_PATCH_SIZE;
-}
-
-/*****************************/
 static int add_patch(
 	Scene*         scene,
 	PatchGenerator generator,
@@ -61,27 +53,25 @@ static int add_patch(
 /*****************************/
 static void update_camera(Scene* scene, double dTime)
 {
-	/* Scale camera position and speed according to patch size */
-	float scale = get_scale(scene);
 	glm_mat4_identity(scene->camera.view);
 
 	vec3 mov;
 	vec3 x    = {1,0,0};
 	vec3 y    = {0,1,0};
 	vec3 z    = {0,0,1};
-	vec3 back = {0,-40 * scale, -40 * scale};
-	vec3 cent = {(scene->patch_size-1)/2.0f, (scene->patch_size-1)/2.0f, 0};
+	vec3 back = {0,-40, -40};
+	vec3 cent = {(DEF_PATCH_SIZE-1)/2.0f, (DEF_PATCH_SIZE-1)/2.0f, 0};
 
 	/* Update position */
 	glm_vec3_copy(scene->cam_dest, mov);
 	glm_vec3_sub(mov, scene->cam_pos, mov);
 	float ml = glm_vec3_norm(mov);
 
-	if(CAM_SPEED * scale * dTime >= ml)
+	if(CAM_SPEED * dTime >= ml)
 		glm_vec3_copy(scene->cam_dest, scene->cam_pos);
 	else
 	{
-		glm_vec3_scale(mov, CAM_SPEED * scale * dTime / ml, mov);
+		glm_vec3_scale(mov, CAM_SPEED * dTime / ml, mov);
 		glm_vec3_add(scene->cam_pos, mov, scene->cam_pos);
 	}
 
@@ -144,23 +134,21 @@ int create_scene(Scene* scene, unsigned int patchSize)
 	/* Create helper geometry */
 	/* Contains a square to indicate the selected patch */
 	/* Plus the axes of the coordinate system */
-	/* Scale axes size according to patch size */
-	float aSize = AXES_SIZE * get_scale(scene);
 	float help_geom[] = {
-		0,           0,           0, .5f, .5f, .5f,
-		patchSize-1, 0,           0, .5f, .5f, .5f,
-		patchSize-1, patchSize-1, 0, .5f, .5f, .5f,
-		0,           patchSize-1, 0, .5f, .5f, .5f,
+		0,                0,                0, .5f, .5f, .5f,
+		DEF_PATCH_SIZE-1, 0,                0, .5f, .5f, .5f,
+		DEF_PATCH_SIZE-1, DEF_PATCH_SIZE-1, 0, .5f, .5f, .5f,
+		0,                DEF_PATCH_SIZE-1, 0, .5f, .5f, .5f,
 
 		/* X axis */
-		0,     0,     0,     1, 0, 0,
-		aSize, 0,     0,     1, 0, 0,
+		0,         0,         0,         1, 0, 0,
+		AXES_SIZE, 0,         0,         1, 0, 0,
 		/* Y axis */
-		0,     0,     0,     0, 1, 0,
-		0,     aSize, 0,     0, 1, 0,
+		0,         0,         0,         0, 1, 0,
+		0,         AXES_SIZE, 0,         0, 1, 0,
 		/* Z axis */
-		0,     0,     0,     0, 0, 1,
-		0,     0,     aSize, 0, 0, 1
+		0,         0,         0,         0, 0, 1,
+		0,         0,         AXES_SIZE, 0, 0, 1
 	};
 
 	glGenVertexArrays(1, &scene->help_vao);
@@ -208,13 +196,15 @@ void draw_scene(Scene* scene)
 	GLint loc = glGetUniformLocation(scene->patch_shader.program, "MVP");
 
 	/* Loop over all patches */
-	vec3 scale = {1, 1, PATCH_HEIGHT * get_scale(scene)};
+	/* Scale the patch to the default size */
+	float s = GET_SCALE(scene->patch_size);
+	vec3 scale = {s, s, PATCH_HEIGHT};
 	mat4 mvp;
 
 	size_t p;
 	for(p = 0; p < scene->num_patches; ++p)
 	{
-		/* The height (z-coord) of all patches is in [0,1] */
+		/* The height (z-coord) of all patches is roughly in [0,1] */
 		/* So move it down 0.5 and scale it */
 		glm_translate_to(scene->camera.pv, scene->patches[p].pos, mvp);
 		glm_scale(mvp, scale);
@@ -276,23 +266,23 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 
 	/* Move the camera */
 	if(key == GLFW_KEY_W && action == GLFW_PRESS)
-		scene->cam_dest[1] += scene->patch_size-1;
+		scene->cam_dest[1] += DEF_PATCH_SIZE-1;
 	if(key == GLFW_KEY_S && action == GLFW_PRESS)
-		scene->cam_dest[1] -= scene->patch_size-1;
+		scene->cam_dest[1] -= DEF_PATCH_SIZE-1;
 	if(key == GLFW_KEY_A && action == GLFW_PRESS)
-		scene->cam_dest[0] -= scene->patch_size-1;
+		scene->cam_dest[0] -= DEF_PATCH_SIZE-1;
 	if(key == GLFW_KEY_D && action == GLFW_PRESS)
-		scene->cam_dest[0] += scene->patch_size-1;
+		scene->cam_dest[0] += DEF_PATCH_SIZE-1;
 
 	/* Move the helper geometry */
 	if(key == GLFW_KEY_UP && action == GLFW_PRESS)
-		scene->help_pos[1] += scene->patch_size-1;
+		scene->help_pos[1] += DEF_PATCH_SIZE-1;
 	if(key == GLFW_KEY_DOWN && action == GLFW_PRESS)
-		scene->help_pos[1] -= scene->patch_size-1;
+		scene->help_pos[1] -= DEF_PATCH_SIZE-1;
 	if(key == GLFW_KEY_LEFT && action == GLFW_PRESS)
-		scene->help_pos[0] -= scene->patch_size-1;
+		scene->help_pos[0] -= DEF_PATCH_SIZE-1;
 	if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
-		scene->help_pos[0] += scene->patch_size-1;
+		scene->help_pos[0] += DEF_PATCH_SIZE-1;
 
 	/* Add a new patch */
 	if(key == GLFW_KEY_ENTER && action == GLFW_PRESS)
@@ -303,6 +293,7 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 			//mod_relax_slope_1d,
 			//mod_flatten,
 			//mod_stats,
+
 			mod_stats,
 			mod_relax_slope,
 			mod_stats,

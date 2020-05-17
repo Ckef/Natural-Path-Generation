@@ -14,12 +14,16 @@
 #define HELP_FRAG   SHADER_DIR "color.frag"
 
 #define DEF_PATCH_SIZE  129 /* 2^N+1 with N=7, that's 128 tiles */
-#define PATCH_HEIGHT    25  /* Scaled according to patch size */
-#define AXES_SIZE       16  /* Scaled according to patch size */
+#define PATCH_HEIGHT    25
+#define AXES_SIZE       16
 #define CAM_FOV         45.0f
 #define CAM_NEAR        0.1f
 #define CAM_FAR         1000.0f
-#define CAM_SPEED       120 /* Scaled according to patch size */
+#define CAM_SPEED       120
+
+/* Scale a patch to the default size */
+/* This is equivalent to the ground distance between two neighbouring vertices */
+#define GET_SCALE(x) ((float)DEF_PATCH_SIZE / (float)x)
 
 /* Camera definition */
 typedef struct

@@ -1,10 +1,13 @@
 
 #include "output.h"
+#include "scene.h"
 #include <math.h>
 
 /*****************************/
 static float max_slope_1d(unsigned int size, float* data)
 {
+	float scale = GET_SCALE(size);
+
 	/* Maximum 1D slope */
 	/* Not to confuse with the gradient */
 	/* To test the 1D version */
@@ -14,7 +17,7 @@ static float max_slope_1d(unsigned int size, float* data)
 		for(r = 0; r < size; ++r)
 		{
 			/* Get slope in x direction */
-			float s = data[(c+1) * size + r] - data[c * size + r];
+			float s = (data[(c+1) * size + r] - data[c * size + r]) / scale;
 			m = s > 0 ? (s > m ? s : m) : (-s > m ? -s : m);
 		}
 
@@ -22,7 +25,7 @@ static float max_slope_1d(unsigned int size, float* data)
 		for(r = 0; r < size-1; ++r)
 		{
 			/* Get slope in y direction */
-			float s = data[c * size + r+1] - data[c * size + r];
+			float s = (data[c * size + r+1] - data[c * size + r]) / scale;
 			m = s > 0 ? (s > m ? s : m) : (-s > m ? -s : m);
 		}
 
@@ -32,6 +35,8 @@ static float max_slope_1d(unsigned int size, float* data)
 /*****************************/
 static float max_slope(unsigned int size, float* data)
 {
+	float scale = GET_SCALE(size);
+
 	/* Maximum 2D slope, i.e. the magnitude of the gradient vector */
 	float m = 0;
 	unsigned int c, r;
@@ -40,8 +45,8 @@ static float max_slope(unsigned int size, float* data)
 		{
 			/* Get the gradient */
 			/* If it is at the boundary, it gets the opposite neighbour */
-			float sx = data[(c == size-1 ? c-1 : c+1) * size + r] - data[c * size + r];
-			float sy = data[c * size + (r == size-1 ? r-1 : r+1)] - data[c * size + r];
+			float sx = (data[(c == size-1 ? c-1 : c+1) * size + r] - data[c * size + r]) / scale;
+			float sy = (data[c * size + (r == size-1 ? r-1 : r+1)] - data[c * size + r]) / scale;
 			float g = sqrtf(sx * sx + sy * sy);
 
 			m = g > m ? g : m;

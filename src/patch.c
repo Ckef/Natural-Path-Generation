@@ -6,6 +6,80 @@
 #include <stdlib.h>
 
 /*****************************/
+static int upload_vertex_data(Patch* patch)
+{
+	/* Temporary buffer to generate vertex data */
+	size_t vertSize = sizeof(float) * patch->size * patch->size * 6;
+	float* data = malloc(vertSize);
+
+	if(data == NULL)
+	{
+		throw_error("Failed to allocate memory to generate vertices.");
+		return 0;
+	}
+
+	/* Now fill the vertex buffer */
+	/* Again, assumes column-major */
+	/* Columns = x, rows = y, height = z */
+	unsigned int c, r;
+	for(c = 0; c < patch->size; ++c)
+		for(r = 0; r < patch->size; ++r)
+		{
+			unsigned int i = c * patch->size + r;
+
+			/* x, y and z */
+			data[i*6+0] = c;
+			data[i*6+1] = r;
+			data[i*6+2] = patch->data[i];
+
+			/* Zero the associated normal */
+			glm_vec3_zero(data + (i*6+3));
+		}
+
+	/* Calculate us some normal data */
+	/* Loop over all triangles and accumulate the normals */
+	for(c = 0; c < (patch->size-1); ++c)
+		for(r = 0; r < (patch->size-1); ++r)
+		{
+			unsigned int iBL = c * patch->size + r;
+			unsigned int iTL = c * patch->size + r + 1;
+			unsigned int iBR = (c+1) * patch->size + r;
+			unsigned int iTR = (c+1) * patch->size + r + 1;
+
+			/* Note we musn't forget to scale the height by the patch height */
+			vec3 x1 = { 1, 0, PATCH_HEIGHT * (data[iBR*6+2] - data[iBL*6+2]) };
+			vec3 y1 = { 0, 1, PATCH_HEIGHT * (data[iTL*6+2] - data[iBL*6+2]) };
+			vec3 x2 = { -1, 0, PATCH_HEIGHT * (data[iTL*6+2] - data[iTR*6+2]) };
+			vec3 y2 = { 0, -1, PATCH_HEIGHT * (data[iBR*6+2] - data[iTR*6+2]) };
+
+			vec3 normal;
+			glm_vec3_crossn(x1, y1, normal);
+			glm_vec3_add(normal, data + (iBL*6+3), data + (iBL*6+3));
+			glm_vec3_add(normal, data + (iTL*6+3), data + (iTL*6+3));
+			glm_vec3_add(normal, data + (iBR*6+3), data + (iBR*6+3));
+
+			glm_vec3_crossn(x2, y2, normal);
+			glm_vec3_add(normal, data + (iTL*6+3), data + (iTL*6+3));
+			glm_vec3_add(normal, data + (iBR*6+3), data + (iBR*6+3));
+			glm_vec3_add(normal, data + (iTR*6+3), data + (iTR*6+3));
+		}
+
+	/* Now just normalize 'm all */
+	for(c = 0; c < patch->size; ++c)
+		for(r = 0; r < patch->size; ++r)
+		{
+			unsigned int i = c * patch->size + r;
+			glm_vec3_normalize(data + (i*6+3));
+		}
+
+	glBindBuffer(GL_ARRAY_BUFFER, patch->vertices);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, vertSize, data);
+	free(data);
+
+	return 1;
+}
+
+/*****************************/
 int create_patch(Patch* patch, unsigned int size)
 {
 	/* Allocate CPU memory */
@@ -112,26 +186,31 @@ int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods)
 		free(patch->mods[m].buffer);
 
 	free(patch->mods);
+	patch->mods = NULL;
 
-	/* Now allocate new modifiers */
 	/* First count the number of new modifiers */
-	for(patch->num_mods = 0; mods && mods[patch->num_mods]; ++patch->num_mods);
-	patch->mods = malloc(sizeof(ModData) * patch->num_mods);
+	patch->num_mods = 0;
+	while(mods && mods[patch->num_mods]) ++patch->num_mods;
 
-	if(!patch->mods)
+	if(patch->num_mods)
 	{
-		throw_error("Could not allocate memory for new modifier data.");
-		patch->num_mods = 0;
-		return 0;
-	}
+		/* Now allocate new modifiers */
+		patch->mods = malloc(sizeof(ModData) * patch->num_mods);
+		if(!patch->mods)
+		{
+			throw_error("Could not allocate memory for new modifier data.");
+			patch->num_mods = 0;
+			return 0;
+		}
 
-	/* Initialize the new modifiers */
-	for(m = 0; m < patch->num_mods; ++m)
-	{
-		patch->mods[m].mod = mods[m];
-		patch->mods[m].done = 0;
-		patch->mods[m].iterations = 0;
-		patch->mods[m].buffer = NULL;
+		/* Initialize the new modifiers */
+		for(m = 0; m < patch->num_mods; ++m)
+		{
+			patch->mods[m].mod = mods[m];
+			patch->mods[m].done = 0;
+			patch->mods[m].iterations = 0;
+			patch->mods[m].buffer = NULL;
+		}
 	}
 
 	/* Generate the terrain */
@@ -141,13 +220,15 @@ int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods)
 		return 0;
 	}
 
-	/* Now perform a single update */
-	return update_patch(patch);
+	/* Upload it to the GPU */
+	return upload_vertex_data(patch);
 }
 
 /*****************************/
 int update_patch(Patch* patch)
 {
+	int modded = 0;
+
 	/* Loop over all modifiers */
 	size_t m;
 	for(m = 0; m < patch->num_mods; ++m)
@@ -163,79 +244,18 @@ int update_patch(Patch* patch)
 			return 0;
 		}
 
+		modded = 1;
+
 		/* If it's still not done, halt */
 		/* This makes it so modifiers only start when previous modifiers have finished */
 		if(!patch->mods[m].done)
 			break;
 	}
 
-	/* Temporary buffer to generate vertex data */
-	size_t vertSize = sizeof(float) * patch->size * patch->size * 6;
-	float* data = malloc(vertSize);
+	/* If no modification has been applied, we're done */
+	/* Otherwise we go ahead and upload new vertex data */
+	if(!modded)
+		return 1;
 
-	if(data == NULL)
-	{
-		throw_error("Failed to allocate memory to generate vertices.");
-		return 0;
-	}
-
-	/* Now fill the vertex buffer */
-	/* Again, assumes column-major */
-	/* Columns = x, rows = y, height = z */
-	unsigned int c, r;
-	for(c = 0; c < patch->size; ++c)
-		for(r = 0; r < patch->size; ++r)
-		{
-			unsigned int i = c * patch->size + r;
-
-			/* x, y and z */
-			data[i*6+0] = c;
-			data[i*6+1] = r;
-			data[i*6+2] = patch->data[i];
-
-			/* Zero the associated normal */
-			glm_vec3_zero(data + (i*6+3));
-		}
-
-	/* Calculate us some normal data */
-	/* Loop over all triangles and accumulate the normals */
-	for(c = 0; c < (patch->size-1); ++c)
-		for(r = 0; r < (patch->size-1); ++r)
-		{
-			unsigned int iBL = c * patch->size + r;
-			unsigned int iTL = c * patch->size + r + 1;
-			unsigned int iBR = (c+1) * patch->size + r;
-			unsigned int iTR = (c+1) * patch->size + r + 1;
-
-			/* Note we musn't forget to scale the height by the patch height */
-			vec3 x1 = { 1, 0, PATCH_HEIGHT * (data[iBR*6+2] - data[iBL*6+2]) };
-			vec3 y1 = { 0, 1, PATCH_HEIGHT * (data[iTL*6+2] - data[iBL*6+2]) };
-			vec3 x2 = { -1, 0, PATCH_HEIGHT * (data[iTL*6+2] - data[iTR*6+2]) };
-			vec3 y2 = { 0, -1, PATCH_HEIGHT * (data[iBR*6+2] - data[iTR*6+2]) };
-
-			vec3 normal;
-			glm_vec3_crossn(x1, y1, normal);
-			glm_vec3_add(normal, data + (iBL*6+3), data + (iBL*6+3));
-			glm_vec3_add(normal, data + (iTL*6+3), data + (iTL*6+3));
-			glm_vec3_add(normal, data + (iBR*6+3), data + (iBR*6+3));
-
-			glm_vec3_crossn(x2, y2, normal);
-			glm_vec3_add(normal, data + (iTL*6+3), data + (iTL*6+3));
-			glm_vec3_add(normal, data + (iBR*6+3), data + (iBR*6+3));
-			glm_vec3_add(normal, data + (iTR*6+3), data + (iTR*6+3));
-		}
-
-	/* Now just normalize 'm all */
-	for(c = 0; c < patch->size; ++c)
-		for(r = 0; r < patch->size; ++r)
-		{
-			unsigned int i = c * patch->size + r;
-			glm_vec3_normalize(data + (i*6+3));
-		}
-
-	glBindBuffer(GL_ARRAY_BUFFER, patch->vertices);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, vertSize, data);
-	free(data);
-
-	return 1;
+	return upload_vertex_data(patch);
 }

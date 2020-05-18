@@ -102,15 +102,15 @@ int main(int argc, char* argv[])
 		/* Draw smth */
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		draw_scene(&scene);
+		glfwSwapBuffers(win);
 
 		/* Update scene */
 		double newTime = glfwGetTime();
 		update_scene(&scene, newTime - time);
 		time = newTime;
 
-		/* Process events + swap buffers */
+		/* Process events */
 		glfwPollEvents();
-		glfwSwapBuffers(win);
 	}
 
 	/* Clean up the scene */

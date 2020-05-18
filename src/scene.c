@@ -242,7 +242,6 @@ void update_scene(Scene* scene, double dTime)
 	size_t p;
 	for(p = 0; p < scene->num_patches; ++p)
 		update_patch(scene->patches + p);
-
 }
 
 /*****************************/

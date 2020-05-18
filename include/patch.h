@@ -4,6 +4,16 @@
 
 #include "deps.h"
 
+/* Intermediate data for iterative modification */
+typedef struct
+{
+	void*        mod; /* In reality a function pointer to the modifier in question */
+	int          done;       /* Non-zero when no iterations will be done anymore */
+	unsigned int iterations; /* Number of iterations done */
+	float*       buffer;
+
+} ModData;
+
 /* Patch definition */
 typedef struct
 {
@@ -11,6 +21,9 @@ typedef struct
 
 	unsigned int size; /* Width and height in vertices (always a square) */
 	float*       data; /* Column-major, generally speaking values are in [0,1] */
+	ModData*     mods; /* Modifiers running 'in the background' */
+	size_t       num_mods;
+
 	GLuint       vao;
 	GLuint       vertices;
 	GLuint       indices;
@@ -22,20 +35,19 @@ typedef struct
  *
  * @param  size  Width and height of the patch in vertices.
  * @param  data  Output data array of size * size length (column-major).
- * @param  opt   Optional pointer to pass.
  * @return       Zero if the generation failed for some reason.
  */
-typedef int (*PatchGenerator)(unsigned int size, float* data, void* opt);
+typedef int (*PatchGenerator)(unsigned int size, float* data);
 
 /**
- * Patch modifier.
+ * Patch modifier, a pointer to a pointer is passed so we can return different data.
  *
  * @param  size  Width and height of the patch in vertices.
- * @param  data  Modifiable input data array of size * size length (column-major).
- * @param  opt   Optional pointer to pass.
+ * @param  data  Pointer to an input data array of size * size length (column-major).
+ * @param  mod   Modifier specific data to pass.
  * @return       Zero if the modification failed for some reason.
  */
-typedef int (*PatchModifier)(unsigned int size, float* data, void* opt);
+typedef int (*PatchModifier)(unsigned int size, float** data, ModData* mod);
 
 /**
  * Creates a new patch of some specified size.
@@ -61,15 +73,17 @@ void draw_patch(Patch* patch);
  * Populates the patch with vertex data given a generator and modifiers.
  *
  * @param  generator  Function that generates a terrain.
- * @param  mods       Array of numMods modifiers (can be NULL), last element must be NULL.
- * @param  opt        Optional pointer to pass to the generator and all modifiers.
+ * @param  mods       Array of modifiers (can be NULL), last element must be NULL.
  * @return            Zero if population failed.
  */
-int populate_patch(
-	Patch*         patch,
-	PatchGenerator generator,
-	PatchModifier* mods,
-	void*          opt);
+int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods);
+
+/**
+ * Updates a patch, i.e. runs all modifiers that still need to iterate.
+ *
+ * @return  Zero if some modifier failed.
+ */
+int update_patch(Patch* patch);
 
 
 #endif

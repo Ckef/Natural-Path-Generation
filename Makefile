@@ -31,7 +31,7 @@ OUT = obj
 CC  = gcc
 
 # Flags for all binaries
-CFLAGS = -Wall -Wsign-compare -Iinclude -Idepend
+CFLAGS = -std=c99 -Wall -Wsign-compare -Iinclude -Idepend
 
 # Flags for object files only
 OFLAGS = $(CFLAGS) -c -s

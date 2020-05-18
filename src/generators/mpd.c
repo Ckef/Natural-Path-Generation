@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 /*****************************/
-int gen_mpd(unsigned int size, float* data, void* opt)
+int gen_mpd(unsigned int size, float* data)
 {
 	/* Check if it is in the form 2^N+1 */
 	if(((size-1) & (size-2)) != 0)

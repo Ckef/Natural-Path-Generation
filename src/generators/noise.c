@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 /*****************************/
-int gen_white_noise(unsigned int size, float* data, void* opt)
+int gen_white_noise(unsigned int size, float* data)
 {
 	/* Make a plane with random values ranging from 0 to 1 */
 	unsigned int i;

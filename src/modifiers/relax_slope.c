@@ -1,5 +1,6 @@
 
 #include "output.h"
+#include "patch.h"
 #include "scene.h"
 #include <float.h>
 #include <math.h>
@@ -48,12 +49,12 @@ static unsigned int move_slope(
 }
 
 /*****************************/
-int mod_relax_slope_1d(unsigned int size, float* data, void* opt)
+int mod_relax_slope_1d(unsigned int size, float** data, ModData* mod)
 {
 	float scale = GET_SCALE(size);
 
 	/* Only modify the center column */
-	float* mid = data + ((size >> 1) * size);
+	float* mid = *data + ((size >> 1) * size);
 
 	/* Count the number of iterations */
 	unsigned int i = 0;
@@ -73,11 +74,13 @@ int mod_relax_slope_1d(unsigned int size, float* data, void* opt)
 
 	output("Slope relaxation took %u iterations.", i);
 
+	/* We don't need to iterate this modifier */
+	mod->done = 1;
 	return 1;
 }
 
 /*****************************/
-int mod_relax_slope(unsigned int size, float* data, void* opt)
+int mod_relax_slope(unsigned int size, float** data, ModData* mod)
 {
 	float scale = GET_SCALE(size);
 
@@ -95,9 +98,9 @@ int mod_relax_slope(unsigned int size, float* data, void* opt)
 			{
 				/* Get the vertex in question and its two neighbours */
 				/* If it is at the boundary, it gets the opposite neighbour */
-				float* x = data + (c * size + r);
-				float* xx = data + ((c == size-1 ? c-1 : c+1) * size + r);
-				float* xy = data + (c * size + (r == size-1 ? r-1 : r+1));
+				float* x = *data + (c * size + r);
+				float* xx = *data + ((c == size-1 ? c-1 : c+1) * size + r);
+				float* xy = *data + (c * size + (r == size-1 ? r-1 : r+1));
 
 				/* This scales gradient vector g by MaxSlope/|g| */
 				float sx = (*xx - *x) / scale;
@@ -126,5 +129,7 @@ int mod_relax_slope(unsigned int size, float* data, void* opt)
 
 	output("Slope relaxation took %u iterations.", i);
 
+	/* We don't need to iterate this modifier */
+	mod->done = 1;
 	return 1;
 }

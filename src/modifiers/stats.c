@@ -1,5 +1,6 @@
 
 #include "output.h"
+#include "patch.h"
 #include "scene.h"
 #include <math.h>
 
@@ -71,14 +72,16 @@ static float total_supplies(unsigned int size, float* data)
 }
 
 /*****************************/
-int mod_stats(unsigned int size, float* data, void* opt)
+int mod_stats(unsigned int size, float** data, ModData* mod)
 {
 	output("");
 	output("-- Terrain Stats --");
-	output("-- max slope 1D:   %f", max_slope_1d(size, data));
-	output("-- max slope 2D:   %f", max_slope(size, data));
-	output("-- total supplies: %f", total_supplies(size, data));
+	output("-- max slope 1D:   %f", max_slope_1d(size, *data));
+	output("-- max slope 2D:   %f", max_slope(size, *data));
+	output("-- total supplies: %f", total_supplies(size, *data));
 	output("");
 
+	/* We don't need to iterate this modifier */
+	mod->done = 1;
 	return 1;
 }

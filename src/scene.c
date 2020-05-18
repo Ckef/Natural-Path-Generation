@@ -7,10 +7,7 @@
 #include <stdlib.h>
 
 /*****************************/
-static int add_patch(
-	Scene*         scene,
-	PatchGenerator generator,
-	PatchModifier* mods)
+static int add_patch(Scene* scene, PatchGenerator generator, PatchModifier* mods)
 {
 	/* Allocate more memory */
 	size_t newSize = (scene->num_patches+1) * sizeof(Patch);
@@ -35,14 +32,13 @@ static int add_patch(
 	glm_vec3_copy(scene->help_pos, new[scene->num_patches].pos);
 
 	/* Populate the new patch */
-	if(!populate_patch(new + scene->num_patches, generator, mods, NULL))
+	if(!populate_patch(new + scene->num_patches, generator, mods))
 	{
 		throw_error("Population of newly created patch failed.");
 		return 0;
 	}
 
 	/* Only update num patches now so we don't get confused later on */
-	/* The reallocation doesn't matter, as it's based on this number */
 	++scene->num_patches;
 
 	output("Patch was created succesfully.");
@@ -118,7 +114,7 @@ int create_scene(Scene* scene, unsigned int patchSize)
 	}
 
 	/* Setup camera */
-	/* The set_camera takes care of the view and pv matrices */
+	/* The update_camera takes care of the view and pv matrices */
 	glm_mat4_identity(scene->camera.proj);
 	glm_vec3_zero(scene->cam_dest);
 	glm_vec3_zero(scene->cam_pos);
@@ -241,6 +237,12 @@ void update_scene(Scene* scene, double dTime)
 	{
 		update_camera(scene, dTime);
 	}
+
+	/* Loop over all patches to update them */
+	size_t p;
+	for(p = 0; p < scene->num_patches; ++p)
+		update_patch(scene->patches + p);
+
 }
 
 /*****************************/
@@ -288,12 +290,6 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 	if(key == GLFW_KEY_ENTER && action == GLFW_PRESS)
 	{
 		PatchModifier mods[] = {
-			//mod_flatten,
-			//mod_stats,
-			//mod_relax_slope_1d,
-			//mod_flatten,
-			//mod_stats,
-
 			mod_stats,
 			mod_relax_slope,
 			mod_stats,

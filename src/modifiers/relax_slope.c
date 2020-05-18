@@ -8,6 +8,7 @@
 /* Hardcoded slope constraint for now */
 #define MAX_SLOPE       0.005f
 #define MAX_ITERATIONS  10000
+#define STEP_SIZE       10
 
 /*****************************/
 static unsigned int move_slope(
@@ -86,10 +87,11 @@ int mod_relax_slope(unsigned int size, float** data, ModData* mod)
 
 	/* Count the number of iterations */
 	unsigned int i = 0;
-	while(i < MAX_ITERATIONS)
+	while(i < STEP_SIZE && mod->iterations < MAX_ITERATIONS)
 	{
 		int done = 1;
 		++i;
+		++mod->iterations;
 
 		/* Loop over all vertices */
 		unsigned int c, r;
@@ -124,12 +126,13 @@ int mod_relax_slope(unsigned int size, float** data, ModData* mod)
 			}
 
 		/* Exit if no changes were made */
-		if(done) break;
+		if(done)
+		{
+			output("Slope relaxation took %u iterations.", mod->iterations);
+			mod->done = 1;
+			break;
+		}
 	}
 
-	output("Slope relaxation took %u iterations.", i);
-
-	/* We don't need to iterate this modifier */
-	mod->done = 1;
 	return 1;
 }

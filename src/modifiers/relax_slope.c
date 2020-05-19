@@ -4,6 +4,7 @@
 #include "scene.h"
 #include <float.h>
 #include <math.h>
+#include <string.h>
 
 /* Hardcoded slope constraint for now */
 #define MAX_SLOPE       0.005f
@@ -12,22 +13,18 @@
 
 /*****************************/
 static unsigned int move_slope(
-	float* p1,
-	float* p2,
+	float  delta,
+	float* o1,
+	float* o2,
 	float  maxSlope,
 	float  scale,
 	float  weight)
 {
-	/* TODO: figure out what to do with weight, it appears to be faster if no weight? */
-	/* ???????? */
-	/* Oh this is probably because we're outputting to the same grid */
-	weight = 1;
-
 	/* The current slope and the indices */
 	/* a is the lowest vertex, b the highest */
-	float s = (*p2 - *p1) / scale;
-	float* b = (s > 0) ? p2 : p1;
-	float* a = (s > 0) ? p1 : p2;
+	float s = delta / scale;
+	float* b = (s > 0) ? o2 : o1;
+	float* a = (s > 0) ? o1 : o2;
 	s = (s > 0) ? s : -s;
 
 	/* Add epsilon to the comparison, otherwise it never exits */
@@ -38,7 +35,7 @@ static unsigned int move_slope(
 	{
 		/* If the slope is too great, move a and b closer to each other */
 		/* The weight is so all vertex pairs can be done in parallel */
-		float move = (s - maxSlope) * scale * .5f * weight;
+		float move = (s - maxSlope) * scale * (.5f * weight);
 		*a += move;
 		*b -= move;
 
@@ -50,12 +47,12 @@ static unsigned int move_slope(
 }
 
 /*****************************/
-int mod_relax_slope_1d(unsigned int size, float** data, ModData* mod)
+int mod_relax_slope_1d(unsigned int size, float* data, ModData* mod)
 {
 	float scale = GET_SCALE(size);
 
 	/* Only modify the center column */
-	float* mid = *data + ((size >> 1) * size);
+	float* mid = data + ((size >> 1) * size);
 
 	/* Count the number of iterations */
 	unsigned int i = 0;
@@ -67,7 +64,11 @@ int mod_relax_slope_1d(unsigned int size, float** data, ModData* mod)
 		/* Loop over all pairs of vertices */
 		unsigned int r;
 		for(r = 0; r < size-1; ++r)
-			done &= move_slope(mid + r, mid + (r+1), MAX_SLOPE, scale, .5f);
+		{
+			/* Use a weight of 1 because this one works sequentially */
+			float d = mid[r+1] - mid[r];
+			done &= move_slope(d, mid + r, mid + (r+1), MAX_SLOPE, scale, 1);
+		}
 
 		/* Exit if no changes were made */
 		if(done) break;
@@ -81,17 +82,32 @@ int mod_relax_slope_1d(unsigned int size, float** data, ModData* mod)
 }
 
 /*****************************/
-int mod_relax_slope(unsigned int size, float** data, ModData* mod)
+int mod_relax_slope(unsigned int size, float* data, ModData* mod)
 {
 	float scale = GET_SCALE(size);
 
+	/* Allocate a buffer for output if it wasn't there yet */
+	size_t buffSize = sizeof(float) * size * size;
+	if(mod->buffer == NULL)
+	{
+		mod->buffer = malloc(buffSize);
+		if(mod->buffer == NULL)
+		{
+			throw_error("Failed to allocate memory for a relaxation buffer.");
+			return 0;
+		}
+	}
+
 	/* Count the number of iterations */
 	unsigned int i = 0;
-	while(i < STEP_SIZE && mod->iterations < MAX_ITERATIONS)
+	while(i < STEP_SIZE)
 	{
 		int done = 1;
 		++i;
 		++mod->iterations;
+
+		/* Prepare input buffer */
+		memcpy(mod->buffer, data, buffSize);
 
 		/* Loop over all vertices */
 		unsigned int c, r;
@@ -100,17 +116,19 @@ int mod_relax_slope(unsigned int size, float** data, ModData* mod)
 			{
 				/* Get the vertex in question and its two neighbours */
 				/* If it is at the boundary, it gets the opposite neighbour */
-				float* x = *data + (c * size + r);
-				float* xx = *data + ((c == size-1 ? c-1 : c+1) * size + r);
-				float* xy = *data + (c * size + (r == size-1 ? r-1 : r+1));
+				unsigned int ix = c * size + r;
+				unsigned int ixx = (c == size-1 ? c-1 : c+1) * size + r;
+				unsigned int ixy = c * size + (r == size-1 ? r-1 : r+1);
 
 				/* This scales gradient vector g by MaxSlope/|g| */
-				float sx = (*xx - *x) / scale;
-				float sy = (*xy - *x) / scale;
+				float dx = mod->buffer[ixx] - mod->buffer[ix];
+				float dy = mod->buffer[ixy] - mod->buffer[ix];
+				float sx = dx / scale;
+				float sy = dy / scale;
 				float g = MAX_SLOPE / sqrtf(sx*sx + sy*sy);
 
-				done &= move_slope(x, xx, (sx > 0 ? sx : -sx) * g, scale, .25f);
-				done &= move_slope(x, xy, (sy > 0 ? sy : -sy) * g, scale, .25f);
+				done &= move_slope(dx, data + ix, data + ixx, (sx > 0 ? sx : -sx) * g, scale, .25f);
+				done &= move_slope(dy, data + ix, data + ixy, (sy > 0 ? sy : -sy) * g, scale, .25f);
 
 				/* This applies different scales to the delta x and delta y */
 				/* It retains the ratio of the two delta's squared */
@@ -126,10 +144,15 @@ int mod_relax_slope(unsigned int size, float** data, ModData* mod)
 			}
 
 		/* Exit if no changes were made */
-		if(done)
+		/* Or when the maximum number of iterations ended */
+		if(done || mod->iterations == MAX_ITERATIONS)
 		{
 			output("Slope relaxation took %u iterations.", mod->iterations);
+
+			free(mod->buffer);
+			mod->buffer = NULL;
 			mod->done = 1;
+
 			break;
 		}
 	}

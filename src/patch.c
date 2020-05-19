@@ -238,7 +238,7 @@ int update_patch(Patch* patch)
 
 		/* If it's not done, call it! */
 		PatchModifier mod = (PatchModifier)patch->mods[m].mod;
-		if(!mod(patch->size, &patch->data, patch->mods + m))
+		if(!mod(patch->size, patch->data, patch->mods + m))
 		{
 			throw_error("Could not update patch due to faulty modifier.");
 			return 0;

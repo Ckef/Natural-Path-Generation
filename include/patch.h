@@ -7,7 +7,7 @@
 /* Intermediate data for iterative modification */
 typedef struct
 {
-	void*        mod; /* In reality a function pointer to the modifier in question */
+	void*        mod;        /* In reality a function pointer to the modifier in question */
 	int          done;       /* Non-zero when no iterations will be done anymore */
 	unsigned int iterations; /* Number of iterations done */
 	float*       buffer;
@@ -40,14 +40,14 @@ typedef struct
 typedef int (*PatchGenerator)(unsigned int size, float* data);
 
 /**
- * Patch modifier, a pointer to a pointer is passed so we can return different data.
+ * Patch modifier, yet again, a function pointer.
  *
  * @param  size  Width and height of the patch in vertices.
  * @param  data  Pointer to an input data array of size * size length (column-major).
  * @param  mod   Modifier specific data to pass.
  * @return       Zero if the modification failed for some reason.
  */
-typedef int (*PatchModifier)(unsigned int size, float** data, ModData* mod);
+typedef int (*PatchModifier)(unsigned int size, float* data, ModData* mod);
 
 /**
  * Creates a new patch of some specified size.

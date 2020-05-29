@@ -14,10 +14,10 @@
 /*****************************/
 static unsigned int move_slope(
 	float  delta,
+	float  scale,
 	float* o1,
 	float* o2,
 	float  maxSlope,
-	float  scale,
 	float  weight)
 {
 	/* The current slope and the indices */
@@ -67,7 +67,7 @@ int mod_relax_slope_1d(unsigned int size, float* data, ModData* mod)
 		{
 			/* Use a weight of 1 because this one works sequentially */
 			float d = mid[r+1] - mid[r];
-			done &= move_slope(d, mid + r, mid + (r+1), MAX_SLOPE, scale, 1);
+			done &= move_slope(d, scale, mid + r, mid + (r+1), MAX_SLOPE, 1);
 		}
 
 		/* Exit if no changes were made */
@@ -116,6 +116,7 @@ int mod_relax_slope(unsigned int size, float* data, ModData* mod)
 			{
 				/* Get the vertex in question and its two neighbours */
 				/* If it is at the boundary, it gets the opposite neighbour */
+				/* TODO: Obviously this does not consider the bottom and left neighbor */
 				unsigned int ix = c * size + r;
 				unsigned int ixx = (c == size-1 ? c-1 : c+1) * size + r;
 				unsigned int ixy = c * size + (r == size-1 ? r-1 : r+1);
@@ -127,20 +128,8 @@ int mod_relax_slope(unsigned int size, float* data, ModData* mod)
 				float sy = dy / scale;
 				float g = MAX_SLOPE / sqrtf(sx*sx + sy*sy);
 
-				done &= move_slope(dx, data + ix, data + ixx, (sx > 0 ? sx : -sx) * g, scale, .25f);
-				done &= move_slope(dy, data + ix, data + ixy, (sy > 0 ? sy : -sy) * g, scale, .25f);
-
-				/* This applies different scales to the delta x and delta y */
-				/* It retains the ratio of the two delta's squared */
-				/*
-				float sx = (*xx - *x) / scale;
-				float sy = (*xy - *x) / scale;
-				float a = sqrtf(sx*sx / (sx*sx + sy*sy));
-				float b = sqrtf(sy*sy / (sx*sx + sy*sy));
-
-				done &= move_slope(x, xx, MAX_SLOPE * a, scale, .25f);
-				done &= move_slope(x, xy, MAX_SLOPE * b, scale, .25f);
-				*/
+				done &= move_slope(dx, scale, data + ix, data + ixx, (sx > 0 ? sx : -sx) * g, .25f);
+				done &= move_slope(dy, scale, data + ix, data + ixy, (sy > 0 ? sy : -sy) * g, .25f);
 			}
 
 		/* Exit if no changes were made */

@@ -8,6 +8,8 @@
 typedef struct
 {
 	void*        mod;        /* In reality a function pointer to the modifier in question */
+	float*       snap;       /* Snapshot buffer of the terrain, mainly for statistics */
+
 	int          done;       /* Non-zero when no iterations will be done anymore */
 	unsigned int iterations; /* Number of iterations done */
 	float*       buffer;

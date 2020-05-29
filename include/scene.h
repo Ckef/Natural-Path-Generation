@@ -42,6 +42,7 @@ typedef struct
 	size_t       num_patches;
 	unsigned int patch_size;
 	Shader       patch_shader;
+	ModMode      mode;
 
 	/* Selection (helper) graphics */
 	vec3   help_pos;
@@ -60,11 +61,12 @@ typedef struct
 /**
  * Creates a new scene.
  *
+ * @param  mode       Mode to use for calculation logic in all modifiers.
  * @param  patchSize  Width and height of all patches in vertices.
  *                    Set to DEF_PATCH_SIZE if value < 2.
  * @return            Zero if the scene creation failed.
  */
-int create_scene(Scene* scene, unsigned int patchSize);
+int create_scene(Scene* scene, ModMode mode, unsigned int patchSize);
 
 /**
  * Destroys a scene.

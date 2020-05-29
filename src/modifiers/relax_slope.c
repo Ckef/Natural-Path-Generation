@@ -65,7 +65,7 @@ int mod_relax_slope_1d(unsigned int size, float* data, ModData* mod)
 		unsigned int r;
 		for(r = 0; r < size-1; ++r)
 		{
-			/* Use a weight of 1 because this one works sequentially */
+			/* Use a weight of 1 because this one works sequentially only */
 			float d = mid[r+1] - mid[r];
 			done &= move_slope(d, scale, mid + r, mid + (r+1), MAX_SLOPE, 1);
 		}
@@ -86,9 +86,10 @@ int mod_relax_slope(unsigned int size, float* data, ModData* mod)
 {
 	float scale = GET_SCALE(size);
 
-	/* Allocate a buffer for output if it wasn't there yet */
+	/* Allocate a buffer for input if it wasn't there yet */
+	/* We just leave it empty if no parallelism allowed */
 	size_t buffSize = sizeof(float) * size * size;
-	if(mod->buffer == NULL)
+	if(mod->mode == PARALLEL && mod->buffer == NULL)
 	{
 		mod->buffer = malloc(buffSize);
 		if(mod->buffer == NULL)
@@ -98,6 +99,12 @@ int mod_relax_slope(unsigned int size, float* data, ModData* mod)
 		}
 	}
 
+	/* Now define the input buffer */
+	/* For parallelism we use the buffer, otherwise just data */
+	/* Also define a weight */
+	float* inp = mod->mode == PARALLEL ? mod->buffer : data;
+	float w = mod->mode == PARALLEL ? .25f : 1;
+
 	/* Count the number of iterations */
 	unsigned int i = 0;
 	while(i < STEP_SIZE)
@@ -106,8 +113,9 @@ int mod_relax_slope(unsigned int size, float* data, ModData* mod)
 		++i;
 		++mod->iterations;
 
-		/* Prepare input buffer */
-		memcpy(mod->buffer, data, buffSize);
+		/* Prepare input buffer if parallel */
+		if(mod->mode == PARALLEL)
+			memcpy(mod->buffer, data, buffSize);
 
 		/* Loop over all vertices */
 		unsigned int c, r;
@@ -122,14 +130,14 @@ int mod_relax_slope(unsigned int size, float* data, ModData* mod)
 				unsigned int ixy = c * size + (r == size-1 ? r-1 : r+1);
 
 				/* This scales gradient vector g by MaxSlope/|g| */
-				float dx = mod->buffer[ixx] - mod->buffer[ix];
-				float dy = mod->buffer[ixy] - mod->buffer[ix];
+				float dx = inp[ixx] - inp[ix];
+				float dy = inp[ixy] - inp[ix];
 				float sx = dx / scale;
 				float sy = dy / scale;
 				float g = MAX_SLOPE / sqrtf(sx*sx + sy*sy);
 
-				done &= move_slope(dx, scale, data + ix, data + ixx, (sx > 0 ? sx : -sx) * g, .25f);
-				done &= move_slope(dy, scale, data + ix, data + ixy, (sy > 0 ? sy : -sy) * g, .25f);
+				done &= move_slope(dx, scale, data + ix, data + ixx, (sx > 0 ? sx : -sx) * g, w);
+				done &= move_slope(dy, scale, data + ix, data + ixy, (sy > 0 ? sy : -sy) * g, w);
 			}
 
 		/* Exit if no changes were made */

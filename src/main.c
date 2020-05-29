@@ -73,12 +73,25 @@ int main(int argc, char* argv[])
 	glfwSetKeyCallback(win, key_callback);
 
 	/* Create a scene */
-	/* First see if an input patch size was given */
-	unsigned int pSize = 0;
-	if(argc > 1) pSize = atoi(argv[1]);
-
+	/* First see if an input mode and patch size was given */
+	/* The first parameter determines the mode */
+	/* s = sequential */
+	/* p = parallel */
+	/* g = gpu (parallel) */
+	/* The second parameter is a number for the grid size */
 	Scene scene;
-	if(!create_scene(&scene, pSize))
+	ModMode mode = PARALLEL;
+	unsigned int pSize = 0;
+
+	if(argc > 1) mode =
+		argv[1][0] == 's' ? SEQUENTIAL :
+		argv[1][0] == 'p' ? PARALLEL :
+		argv[1][0] == 'g' ? GPU :
+		mode;
+	if(argc > 2)
+		pSize = atoi(argv[2]);
+
+	if(!create_scene(&scene, mode, pSize))
 	{
 		throw_error("Could not create a scene.");
 		goto terminate;

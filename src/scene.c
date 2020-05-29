@@ -32,7 +32,7 @@ static int add_patch(Scene* scene, PatchGenerator generator, PatchModifier* mods
 	glm_vec3_copy(scene->help_pos, new[scene->num_patches].pos);
 
 	/* Populate the new patch */
-	if(!populate_patch(new + scene->num_patches, generator, mods))
+	if(!populate_patch(new + scene->num_patches, generator, mods, scene->mode))
 	{
 		throw_error("Population of newly created patch failed.");
 		return 0;
@@ -94,10 +94,11 @@ static void update_camera(Scene* scene, double dTime)
 }
 
 /*****************************/
-int create_scene(Scene* scene, unsigned int patchSize)
+int create_scene(Scene* scene, ModMode mode, unsigned int patchSize)
 {
 	if(patchSize < 2) patchSize = DEF_PATCH_SIZE;
 	scene->patch_size = patchSize;
+	scene->mode = mode;
 
 	/* Load shaders */
 	if(!create_shader(&scene->patch_shader, PATCH_VERT, PATCH_FRAG))

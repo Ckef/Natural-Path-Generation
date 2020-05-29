@@ -181,7 +181,7 @@ void draw_patch(Patch* patch)
 }
 
 /*****************************/
-int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods)
+int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods, ModMode mode)
 {
 	/* Destroy the current modifiers */
 	size_t m;
@@ -210,11 +210,12 @@ int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods)
 		/* Initialize the new modifiers */
 		for(m = 0; m < patch->num_mods; ++m)
 		{
-			patch->mods[m].mod = mods[m];
-			patch->mods[m].snap = NULL;
-			patch->mods[m].done = 0;
+			patch->mods[m].mod        = mods[m];
+			patch->mods[m].mode       = mode;
+			patch->mods[m].snap       = NULL;
+			patch->mods[m].done       = 0;
 			patch->mods[m].iterations = 0;
-			patch->mods[m].buffer = NULL;
+			patch->mods[m].buffer     = NULL;
 		}
 	}
 

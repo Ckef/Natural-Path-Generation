@@ -4,10 +4,20 @@
 
 #include "deps.h"
 
+/* Calculation mode */
+typedef enum
+{
+	SEQUENTIAL,
+	PARALLEL,
+	GPU /* Not yet operational */
+
+} ModMode;
+
 /* Intermediate data for iterative modification */
 typedef struct
 {
 	void*        mod;        /* In reality a function pointer to the modifier in question */
+	ModMode      mode;
 	float*       snap;       /* Snapshot buffer of the terrain, mainly for statistics */
 
 	int          done;       /* Non-zero when no iterations will be done anymore */
@@ -76,9 +86,10 @@ void draw_patch(Patch* patch);
  *
  * @param  generator  Function that generates a terrain.
  * @param  mods       Array of modifiers (can be NULL), last element must be NULL.
+ * @param  mode       Mode of calculation to use for all modifiers.
  * @return            Zero if population failed.
  */
-int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods);
+int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods, ModMode mode);
 
 /**
  * Updates a patch, i.e. runs all modifiers that still need to iterate.

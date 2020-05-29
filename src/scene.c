@@ -22,7 +22,7 @@ static int add_patch(Scene* scene, PatchGenerator generator, PatchModifier* mods
 	scene->patches = new;
 
 	/* Create a new patch */
-	if(!create_patch(new + scene->num_patches, scene->patch_size))
+	if(!create_patch(new + scene->num_patches, scene->patch_mode, scene->patch_size))
 	{
 		throw_error("Could not create a new patch for scene.");
 		return 0;
@@ -32,7 +32,7 @@ static int add_patch(Scene* scene, PatchGenerator generator, PatchModifier* mods
 	glm_vec3_copy(scene->help_pos, new[scene->num_patches].pos);
 
 	/* Populate the new patch */
-	if(!populate_patch(new + scene->num_patches, generator, mods, scene->mode))
+	if(!populate_patch(new + scene->num_patches, generator, mods))
 	{
 		throw_error("Population of newly created patch failed.");
 		return 0;
@@ -98,7 +98,7 @@ int create_scene(Scene* scene, ModMode mode, unsigned int patchSize)
 {
 	if(patchSize < 2) patchSize = DEF_PATCH_SIZE;
 	scene->patch_size = patchSize;
-	scene->mode = mode;
+	scene->patch_mode = mode;
 
 	/* Load shaders */
 	if(!create_shader(&scene->patch_shader, PATCH_VERT, PATCH_FRAG))

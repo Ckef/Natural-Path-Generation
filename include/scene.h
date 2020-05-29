@@ -42,7 +42,7 @@ typedef struct
 	size_t       num_patches;
 	unsigned int patch_size;
 	Shader       patch_shader;
-	ModMode      mode;
+	ModMode      patch_mode;
 
 	/* Selection (helper) graphics */
 	vec3   help_pos;

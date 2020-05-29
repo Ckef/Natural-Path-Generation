@@ -80,7 +80,7 @@ static int upload_vertex_data(Patch* patch)
 }
 
 /*****************************/
-int create_patch(Patch* patch, unsigned int size)
+int create_patch(Patch* patch, ModMode mode, unsigned int size)
 {
 	/* Allocate CPU memory */
 	size_t vertSize = sizeof(float) * size * size;
@@ -96,6 +96,7 @@ int create_patch(Patch* patch, unsigned int size)
 
 	patch->mods = NULL;
 	patch->num_mods = 0;
+	patch->mode = mode;
 
 	/* Allocate GPU memory and setup VAO */
 	glGenVertexArrays(1, &patch->vao);
@@ -181,7 +182,7 @@ void draw_patch(Patch* patch)
 }
 
 /*****************************/
-int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods, ModMode mode)
+int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods)
 {
 	/* Destroy the current modifiers */
 	size_t m;
@@ -211,7 +212,7 @@ int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods, 
 		for(m = 0; m < patch->num_mods; ++m)
 		{
 			patch->mods[m].mod        = mods[m];
-			patch->mods[m].mode       = mode;
+			patch->mods[m].mode       = patch->mode;
 			patch->mods[m].snap       = NULL;
 			patch->mods[m].done       = 0;
 			patch->mods[m].iterations = 0;

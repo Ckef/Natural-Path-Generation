@@ -9,7 +9,7 @@ typedef enum
 {
 	SEQUENTIAL,
 	PARALLEL,
-	GPU /* Not yet operational */
+	GPU /* TODO: Not yet operational */
 
 } ModMode;
 
@@ -18,7 +18,7 @@ typedef struct
 {
 	void*        mod;        /* In reality a function pointer to the modifier in question */
 	ModMode      mode;
-	float*       snap;       /* Snapshot buffer of the terrain, mainly for statistics */
+	float*       snap; /* TODO: Not yet operational */
 
 	int          done;       /* Non-zero when no iterations will be done anymore */
 	unsigned int iterations; /* Number of iterations done */
@@ -35,6 +35,7 @@ typedef struct
 	float*       data; /* Column-major, generally speaking values are in [0,1] */
 	ModData*     mods; /* Modifiers running 'in the background' */
 	size_t       num_mods;
+	ModMode      mode;
 
 	GLuint       vao;
 	GLuint       vertices;
@@ -64,10 +65,11 @@ typedef int (*PatchModifier)(unsigned int size, float* data, ModData* mod);
 /**
  * Creates a new patch of some specified size.
  *
+ * @param  mode  Mode to use for calculation logic in all modifiers.
  * @param  size  Width and height of the patch in vertices.
  * @return       Zero if creation failed.
  */
-int create_patch(Patch* patch, unsigned int size);
+int create_patch(Patch* patch, ModMode mode, unsigned int size);
 
 /**
  * Destroys a patch.
@@ -86,10 +88,9 @@ void draw_patch(Patch* patch);
  *
  * @param  generator  Function that generates a terrain.
  * @param  mods       Array of modifiers (can be NULL), last element must be NULL.
- * @param  mode       Mode of calculation to use for all modifiers.
  * @return            Zero if population failed.
  */
-int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods, ModMode mode);
+int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods);
 
 /**
  * Updates a patch, i.e. runs all modifiers that still need to iterate.

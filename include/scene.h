@@ -23,7 +23,7 @@
 
 /* Scale a patch to the default size */
 /* This is equivalent to the ground distance between two neighbouring vertices */
-#define GET_SCALE(x) ((float)DEF_PATCH_SIZE / (float)x)
+#define GET_SCALE(x) ((float)(DEF_PATCH_SIZE-1) / (float)(x-1))
 
 /* Camera definition */
 typedef struct

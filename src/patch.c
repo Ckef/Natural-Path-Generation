@@ -80,7 +80,7 @@ static int upload_vertex_data(Patch* patch)
 }
 
 /*****************************/
-int create_patch(Patch* patch, unsigned int size)
+int create_patch(Patch* patch, ModMode mode, unsigned int size)
 {
 	/* Allocate CPU memory */
 	size_t vertSize = sizeof(float) * size * size;
@@ -96,6 +96,7 @@ int create_patch(Patch* patch, unsigned int size)
 
 	patch->mods = NULL;
 	patch->num_mods = 0;
+	patch->mode = mode;
 
 	/* Allocate GPU memory and setup VAO */
 	glGenVertexArrays(1, &patch->vao);
@@ -163,7 +164,10 @@ void destroy_patch(Patch* patch)
 	/* Destroy all modifiers */
 	size_t m;
 	for(m = 0; m < patch->num_mods; ++m)
+	{
+		free(patch->mods[m].snap);
 		free(patch->mods[m].buffer);
+	}
 
 	free(patch->mods);
 	free(patch->data);
@@ -187,10 +191,11 @@ int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods)
 
 	free(patch->mods);
 	patch->mods = NULL;
+	patch->num_mods = 0;
 
 	/* First count the number of new modifiers */
-	patch->num_mods = 0;
-	while(mods && mods[patch->num_mods]) ++patch->num_mods;
+	while(mods && mods[patch->num_mods])
+		++patch->num_mods;
 
 	if(patch->num_mods)
 	{
@@ -206,10 +211,12 @@ int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods)
 		/* Initialize the new modifiers */
 		for(m = 0; m < patch->num_mods; ++m)
 		{
-			patch->mods[m].mod = mods[m];
-			patch->mods[m].done = 0;
+			patch->mods[m].mod        = mods[m];
+			patch->mods[m].mode       = patch->mode;
+			patch->mods[m].snap       = NULL;
+			patch->mods[m].done       = 0;
 			patch->mods[m].iterations = 0;
-			patch->mods[m].buffer = NULL;
+			patch->mods[m].buffer     = NULL;
 		}
 	}
 
@@ -238,7 +245,7 @@ int update_patch(Patch* patch)
 
 		/* If it's not done, call it! */
 		PatchModifier mod = (PatchModifier)patch->mods[m].mod;
-		if(!mod(patch->size, &patch->data, patch->mods + m))
+		if(!mod(patch->size, patch->data, patch->mods + m))
 		{
 			throw_error("Could not update patch due to faulty modifier.");
 			return 0;

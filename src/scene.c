@@ -22,7 +22,7 @@ static int add_patch(Scene* scene, PatchGenerator generator, PatchModifier* mods
 	scene->patches = new;
 
 	/* Create a new patch */
-	if(!create_patch(new + scene->num_patches, scene->patch_size))
+	if(!create_patch(new + scene->num_patches, scene->patch_mode, scene->patch_size))
 	{
 		throw_error("Could not create a new patch for scene.");
 		return 0;
@@ -94,10 +94,11 @@ static void update_camera(Scene* scene, double dTime)
 }
 
 /*****************************/
-int create_scene(Scene* scene, unsigned int patchSize)
+int create_scene(Scene* scene, ModMode mode, unsigned int patchSize)
 {
 	if(patchSize < 2) patchSize = DEF_PATCH_SIZE;
 	scene->patch_size = patchSize;
+	scene->patch_mode = mode;
 
 	/* Load shaders */
 	if(!create_shader(&scene->patch_shader, PATCH_VERT, PATCH_FRAG))

@@ -4,10 +4,22 @@
 
 #include "deps.h"
 
+/* Calculation mode */
+typedef enum
+{
+	SEQUENTIAL,
+	PARALLEL,
+	GPU /* TODO: Not yet operational */
+
+} ModMode;
+
 /* Intermediate data for iterative modification */
 typedef struct
 {
-	void*        mod; /* In reality a function pointer to the modifier in question */
+	void*        mod;        /* In reality a function pointer to the modifier in question */
+	ModMode      mode;
+	float*       snap; /* TODO: Not yet operational */
+
 	int          done;       /* Non-zero when no iterations will be done anymore */
 	unsigned int iterations; /* Number of iterations done */
 	float*       buffer;
@@ -23,6 +35,7 @@ typedef struct
 	float*       data; /* Column-major, generally speaking values are in [0,1] */
 	ModData*     mods; /* Modifiers running 'in the background' */
 	size_t       num_mods;
+	ModMode      mode;
 
 	GLuint       vao;
 	GLuint       vertices;
@@ -40,22 +53,23 @@ typedef struct
 typedef int (*PatchGenerator)(unsigned int size, float* data);
 
 /**
- * Patch modifier, a pointer to a pointer is passed so we can return different data.
+ * Patch modifier, yet again, a function pointer.
  *
  * @param  size  Width and height of the patch in vertices.
  * @param  data  Pointer to an input data array of size * size length (column-major).
  * @param  mod   Modifier specific data to pass.
  * @return       Zero if the modification failed for some reason.
  */
-typedef int (*PatchModifier)(unsigned int size, float** data, ModData* mod);
+typedef int (*PatchModifier)(unsigned int size, float* data, ModData* mod);
 
 /**
  * Creates a new patch of some specified size.
  *
+ * @param  mode  Mode to use for calculation logic in all modifiers.
  * @param  size  Width and height of the patch in vertices.
  * @return       Zero if creation failed.
  */
-int create_patch(Patch* patch, unsigned int size);
+int create_patch(Patch* patch, ModMode mode, unsigned int size);
 
 /**
  * Destroys a patch.

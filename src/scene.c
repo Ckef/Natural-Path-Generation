@@ -290,6 +290,7 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 	if(key == GLFW_KEY_ENTER && action == GLFW_PRESS)
 	{
 		PatchModifier mods[] = {
+			mod_subdivide,
 			mod_stats,
 			mod_relax_slope,
 			mod_stats,

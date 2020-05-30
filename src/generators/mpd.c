@@ -13,11 +13,6 @@ int gen_mpd(unsigned int size, Vertex* data)
 		return 0;
 	}
 
-	/* Initialize flags */
-	unsigned int i;
-	for(i = 0; i < size * size; ++i)
-		data[i].flags = i > (size*size >> 1) ? 0 : 1;
-
 	/* Initialize corners */
 	data[0].h             = .5f;
 	data[size-1].h        = .5f;
@@ -46,6 +41,7 @@ int gen_mpd(unsigned int size, Vertex* data)
 			}
 
 		/* Iterate over all diamonds */
+		unsigned int i;
 		for(i = 0, c = 0; c < size; c += step>>1, i ^= 1)
 			for(r = i ? 0 : step>>1; r < size; r += step)
 			{

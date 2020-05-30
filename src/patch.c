@@ -4,6 +4,7 @@
 #include "patch.h"
 #include "scene.h"
 #include <stdlib.h>
+#include <string.h>
 
 /*****************************/
 static int upload_vertex_data(Patch* patch)
@@ -113,6 +114,9 @@ int create_patch(Patch* patch, ModMode mode, unsigned int size)
 	patch->mods = NULL;
 	patch->num_mods = 0;
 	patch->mode = mode;
+
+	/* Initialize everything to zero */
+	memset(patch->data, 0, vertSize);
 
 	/* Allocate GPU memory and setup VAO */
 	glGenVertexArrays(1, &patch->vao);

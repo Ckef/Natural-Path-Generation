@@ -10,6 +10,12 @@
 int mod_stats(unsigned int size, Vertex* data, ModData* mod);
 
 /**
+ * Makes a subdivision of the terrain.
+ * Each region has its own constraints (i.e. flags).
+ */
+int mod_subdivide(unsigned int size, Vertex* data, ModData* mod);
+
+/**
  * Flattens the terrain to 1D.
  * It copies the center (rounded down) column to all other columns.
  */

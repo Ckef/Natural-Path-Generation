@@ -5,7 +5,7 @@
 #include <math.h>
 
 /*****************************/
-static float max_slope_1d(unsigned int size, Vertex* data)
+static float max_slope_1d(unsigned int size, Vertex* data, int flags)
 {
 	float scale = GET_SCALE(size);
 
@@ -17,6 +17,9 @@ static float max_slope_1d(unsigned int size, Vertex* data)
 	for(c = 0; c < size-1; ++c)
 		for(r = 0; r < size; ++r)
 		{
+			if(!(data[c * size + r].flags & flags))
+				continue;
+
 			/* Get slope in x direction */
 			float s = (data[(c+1) * size + r].h - data[c * size + r].h) / scale;
 			m = s > 0 ? (s > m ? s : m) : (-s > m ? -s : m);
@@ -25,6 +28,9 @@ static float max_slope_1d(unsigned int size, Vertex* data)
 	for(c = 0; c < size; ++c)
 		for(r = 0; r < size-1; ++r)
 		{
+			if(!(data[c * size + r].flags & flags))
+				continue;
+
 			/* Get slope in y direction */
 			float s = (data[c * size + r+1].h - data[c * size + r].h) / scale;
 			m = s > 0 ? (s > m ? s : m) : (-s > m ? -s : m);
@@ -34,7 +40,7 @@ static float max_slope_1d(unsigned int size, Vertex* data)
 }
 
 /*****************************/
-static float max_slope(unsigned int size, Vertex* data)
+static float max_slope(unsigned int size, Vertex* data, int flags)
 {
 	float scale = GET_SCALE(size);
 
@@ -44,6 +50,9 @@ static float max_slope(unsigned int size, Vertex* data)
 	for(c = 0; c < size; ++c)
 		for(r = 0; r < size; ++r)
 		{
+			if(!(data[c * size + r].flags & flags))
+				continue;
+
 			/* Get the gradient */
 			/* If it is at the boundary, it gets the opposite neighbour */
 			float sx = (data[(c == size-1 ? c-1 : c+1) * size + r].h - data[c * size + r].h) / scale;
@@ -76,8 +85,8 @@ int mod_stats(unsigned int size, Vertex* data, ModData* mod)
 {
 	output("");
 	output("-- Terrain Stats --");
-	output("-- max slope 1D:   %f", max_slope_1d(size, data));
-	output("-- max slope 2D:   %f", max_slope(size, data));
+	output("-- max slope 1D:   %f", max_slope_1d(size, data, 1));
+	output("-- max slope 2D:   %f", max_slope(size, data, 1));
 	output("-- total supplies: %f", total_supplies(size, data));
 	output("");
 

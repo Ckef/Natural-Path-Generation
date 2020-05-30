@@ -11,6 +11,7 @@ typedef struct
 
 } Shader;
 
+
 /**
  * Creates a new shader from two files.
  *

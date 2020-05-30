@@ -8,7 +8,7 @@
 
 /* Define some scene values */
 #define SHADER_DIR  "shaders/"
-#define PATCH_VERT  SHADER_DIR "gradient.vert"
+#define PATCH_VERT  SHADER_DIR "normal.vert"
 #define PATCH_FRAG  SHADER_DIR "lighting.frag"
 #define HELP_VERT   SHADER_DIR "color.vert"
 #define HELP_FRAG   SHADER_DIR "color.frag"
@@ -34,6 +34,7 @@ typedef struct
 
 } Camera;
 
+
 /* Scene deinition */
 typedef struct
 {
@@ -57,6 +58,7 @@ typedef struct
 	float cam_angle;
 
 } Scene;
+
 
 /**
  * Creates a new scene.

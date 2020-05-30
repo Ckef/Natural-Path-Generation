@@ -138,6 +138,16 @@ int mod_relax_slope(unsigned int size, float* data, ModData* mod)
 
 				done &= move_slope(dx, scale, data + ix, data + ixx, (sx > 0 ? sx : -sx) * g, w);
 				done &= move_slope(dy, scale, data + ix, data + ixy, (sy > 0 ? sy : -sy) * g, w);
+
+				/* This applies different scales to the delta x and delta y */
+				/* It retains the ratio of the two directional delta's squared */
+				/*
+				float a = sqrtf(sx*sx / (sx*sx + sy*sy)) * MAX_SLOPE;
+				float b = sqrtf(sy*sy / (sx*sx + sy*sy)) * MAX_SLOPE;
+
+				done &= move_slope(dx, scale, data + ix, data + ixx, a, w);
+				done &= move_slope(dy, scale, data + ix, data + ixy, b, w);
+				*/
 			}
 
 		/* Exit if no changes were made */

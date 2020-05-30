@@ -13,6 +13,7 @@ typedef enum
 
 } ModMode;
 
+
 /* Intermediate data for iterative modification */
 typedef struct
 {
@@ -25,6 +26,7 @@ typedef struct
 	float*       buffer;
 
 } ModData;
+
 
 /* Patch definition */
 typedef struct
@@ -42,6 +44,7 @@ typedef struct
 	GLuint       indices;
 
 } Patch;
+
 
 /**
  * Patch generator definition, a function pointer.

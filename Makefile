@@ -3,7 +3,6 @@
 # If no target was given
 
 help:
-	@echo ""
 	@echo "Currently OpenGL 4.2 is hardcoded."
 	@echo "Dependencies that need to be installed:"
 	@echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -18,9 +17,9 @@ help:
 	@echo ""
 	@echo "Available commands:"
 	@echo "~~~~~~~~~~~~~~~~~~~"
-	@echo "$(MAKE) clean      Clean temporary files."
-	@echo "$(MAKE) terr       Build the program."
-	@echo ""
+	@echo "make clean      Clean temporary files."
+	@echo "make terr       Build the program."
+	@echo "./terr <m> <r>  Run the build."
 
 
 ###############################

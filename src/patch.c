@@ -9,7 +9,7 @@
 static int upload_vertex_data(Patch* patch)
 {
 	/* Temporary buffer to generate vertex data */
-	size_t vertSize = sizeof(float) * patch->size * patch->size * 6;
+	size_t vertSize = sizeof(float) * patch->size * patch->size * 9;
 	float* data = malloc(vertSize);
 
 	if(data == NULL)
@@ -28,12 +28,28 @@ static int upload_vertex_data(Patch* patch)
 			unsigned int i = c * patch->size + r;
 
 			/* x, y and z */
-			data[i*6+0] = c;
-			data[i*6+1] = r;
-			data[i*6+2] = patch->data[i];
+			data[i*9+0] = c;
+			data[i*9+1] = r;
+			data[i*9+2] = patch->data[i].h;
 
 			/* Zero the associated normal */
-			glm_vec3_zero(data + (i*6+3));
+			glm_vec3_zero(data + (i*9+3));
+
+			/* Determine color from the flags */
+			if(patch->data[i].flags & 1)
+			{
+				/* Some green terrain */
+				data[i*9+6] = 0;
+				data[i*9+7] = 1;
+				data[i*9+8] = 0;
+			}
+			else
+			{
+				/* Some yellow terrain */
+				data[i*9+6] = .8f;
+				data[i*9+7] = .8f;
+				data[i*9+8] = 0;
+			}
 		}
 
 	/* Calculate us some normal data */
@@ -47,21 +63,21 @@ static int upload_vertex_data(Patch* patch)
 			unsigned int iTR = (c+1) * patch->size + r + 1;
 
 			/* Note we musn't forget to scale the height by the patch height */
-			vec3 x1 = { 1, 0, PATCH_HEIGHT * (data[iBR*6+2] - data[iBL*6+2]) };
-			vec3 y1 = { 0, 1, PATCH_HEIGHT * (data[iTL*6+2] - data[iBL*6+2]) };
-			vec3 x2 = { -1, 0, PATCH_HEIGHT * (data[iTL*6+2] - data[iTR*6+2]) };
-			vec3 y2 = { 0, -1, PATCH_HEIGHT * (data[iBR*6+2] - data[iTR*6+2]) };
+			vec3 x1 = { 1, 0, PATCH_HEIGHT * (data[iBR*9+2] - data[iBL*9+2]) };
+			vec3 y1 = { 0, 1, PATCH_HEIGHT * (data[iTL*9+2] - data[iBL*9+2]) };
+			vec3 x2 = { -1, 0, PATCH_HEIGHT * (data[iTL*9+2] - data[iTR*9+2]) };
+			vec3 y2 = { 0, -1, PATCH_HEIGHT * (data[iBR*9+2] - data[iTR*9+2]) };
 
 			vec3 normal;
 			glm_vec3_crossn(x1, y1, normal);
-			glm_vec3_add(normal, data + (iBL*6+3), data + (iBL*6+3));
-			glm_vec3_add(normal, data + (iTL*6+3), data + (iTL*6+3));
-			glm_vec3_add(normal, data + (iBR*6+3), data + (iBR*6+3));
+			glm_vec3_add(normal, data + (iBL*9+3), data + (iBL*9+3));
+			glm_vec3_add(normal, data + (iTL*9+3), data + (iTL*9+3));
+			glm_vec3_add(normal, data + (iBR*9+3), data + (iBR*9+3));
 
 			glm_vec3_crossn(x2, y2, normal);
-			glm_vec3_add(normal, data + (iTL*6+3), data + (iTL*6+3));
-			glm_vec3_add(normal, data + (iBR*6+3), data + (iBR*6+3));
-			glm_vec3_add(normal, data + (iTR*6+3), data + (iTR*6+3));
+			glm_vec3_add(normal, data + (iTL*9+3), data + (iTL*9+3));
+			glm_vec3_add(normal, data + (iBR*9+3), data + (iBR*9+3));
+			glm_vec3_add(normal, data + (iTR*9+3), data + (iTR*9+3));
 		}
 
 	/* Now just normalize 'm all */
@@ -69,7 +85,7 @@ static int upload_vertex_data(Patch* patch)
 		for(r = 0; r < patch->size; ++r)
 		{
 			unsigned int i = c * patch->size + r;
-			glm_vec3_normalize(data + (i*6+3));
+			glm_vec3_normalize(data + (i*9+3));
 		}
 
 	glBindBuffer(GL_ARRAY_BUFFER, patch->vertices);
@@ -83,7 +99,7 @@ static int upload_vertex_data(Patch* patch)
 int create_patch(Patch* patch, ModMode mode, unsigned int size)
 {
 	/* Allocate CPU memory */
-	size_t vertSize = sizeof(float) * size * size;
+	size_t vertSize = sizeof(Vertex) * size * size;
 	glm_vec3_zero(patch->pos);
 	patch->size = size;
 	patch->data = malloc(vertSize);
@@ -104,18 +120,21 @@ int create_patch(Patch* patch, ModMode mode, unsigned int size)
 	glGenBuffers(1, &patch->indices);
 
 	glBindBuffer(GL_ARRAY_BUFFER, patch->vertices);
-	glBufferData(GL_ARRAY_BUFFER, vertSize * 6, NULL, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertSize * 9, NULL, GL_STATIC_DRAW);
 
-	/* So we have 3 floats for the position and 3 for the normal */
+	/* So we have 3 floats for the position, normal and color */
 	GLsizei attrSize = sizeof(float) * 3;
 	glBindVertexArray(patch->vao);
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
 
 	glVertexAttribPointer(
-		0, 3, GL_FLOAT, GL_FALSE, attrSize * 2, (GLvoid*)0);
+		0, 3, GL_FLOAT, GL_FALSE, attrSize * 3, (GLvoid*)0);
 	glVertexAttribPointer(
-		1, 3, GL_FLOAT, GL_FALSE, attrSize * 2, (GLvoid*)(uintptr_t)attrSize);
+		1, 3, GL_FLOAT, GL_FALSE, attrSize * 3, (GLvoid*)(uintptr_t)attrSize);
+	glVertexAttribPointer(
+		2, 3, GL_FLOAT, GL_FALSE, attrSize * 3, (GLvoid*)(uintptr_t)(attrSize*2));
 
 	/* Generate some index data */
 	size_t indSize = sizeof(unsigned int) * 6 * (size-1) * (size-1);

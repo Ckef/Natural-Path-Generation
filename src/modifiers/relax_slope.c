@@ -13,18 +13,18 @@
 
 /*****************************/
 static unsigned int move_slope(
-	float  delta,
-	float  scale,
-	float* o1,
-	float* o2,
-	float  maxSlope,
-	float  weight)
+	float   delta,
+	float   scale,
+	Vertex* o1,
+	Vertex* o2,
+	float   maxSlope,
+	float   weight)
 {
 	/* The current slope and the indices */
 	/* a is the lowest vertex, b the highest */
 	float s = delta / scale;
-	float* b = (s > 0) ? o2 : o1;
-	float* a = (s > 0) ? o1 : o2;
+	Vertex* b = (s > 0) ? o2 : o1;
+	Vertex* a = (s > 0) ? o1 : o2;
 	s = (s > 0) ? s : -s;
 
 	/* Add epsilon to the comparison, otherwise it never exits */
@@ -36,8 +36,8 @@ static unsigned int move_slope(
 		/* If the slope is too great, move a and b closer to each other */
 		/* The weight is so all vertex pairs can be done in parallel */
 		float move = (s - maxSlope) * scale * (.5f * weight);
-		*a += move;
-		*b -= move;
+		a->h += move;
+		b->h -= move;
 
 		/* Modification applied, return 0, indicating we are not done yet */
 		return 0;
@@ -47,12 +47,12 @@ static unsigned int move_slope(
 }
 
 /*****************************/
-int mod_relax_slope_1d(unsigned int size, float* data, ModData* mod)
+int mod_relax_slope_1d(unsigned int size, Vertex* data, ModData* mod)
 {
 	float scale = GET_SCALE(size);
 
 	/* Only modify the center column */
-	float* mid = data + ((size >> 1) * size);
+	Vertex* mid = data + ((size >> 1) * size);
 
 	/* Count the number of iterations */
 	unsigned int i = 0;
@@ -66,7 +66,7 @@ int mod_relax_slope_1d(unsigned int size, float* data, ModData* mod)
 		for(r = 0; r < size-1; ++r)
 		{
 			/* Use a weight of 1 because this one works sequentially only */
-			float d = mid[r+1] - mid[r];
+			float d = mid[r+1].h - mid[r].h;
 			done &= move_slope(d, scale, mid + r, mid + (r+1), MAX_SLOPE, 1);
 		}
 
@@ -82,13 +82,13 @@ int mod_relax_slope_1d(unsigned int size, float* data, ModData* mod)
 }
 
 /*****************************/
-int mod_relax_slope(unsigned int size, float* data, ModData* mod)
+int mod_relax_slope(unsigned int size, Vertex* data, ModData* mod)
 {
 	float scale = GET_SCALE(size);
 
 	/* Allocate a buffer for input if it wasn't there yet */
 	/* We just leave it empty if no parallelism allowed */
-	size_t buffSize = sizeof(float) * size * size;
+	size_t buffSize = sizeof(Vertex) * size * size;
 	if(mod->mode == PARALLEL && mod->buffer == NULL)
 	{
 		mod->buffer = malloc(buffSize);
@@ -102,7 +102,7 @@ int mod_relax_slope(unsigned int size, float* data, ModData* mod)
 	/* Now define the input buffer */
 	/* For parallelism we use the buffer, otherwise just data */
 	/* Also define a weight */
-	float* inp = mod->mode == PARALLEL ? mod->buffer : data;
+	Vertex* inp = mod->mode == PARALLEL ? mod->buffer : data;
 	float w = mod->mode == PARALLEL ? .25f : 1;
 
 	/* Count the number of iterations */
@@ -122,6 +122,10 @@ int mod_relax_slope(unsigned int size, float* data, ModData* mod)
 		for(c = 0; c < size; ++c)
 			for(r = 0; r < size; ++r)
 			{
+				/* Check if the gradient constraint applies */
+				if(!(inp[c * size + r].flags & 1))
+					continue;
+
 				/* Get the vertex in question and its two neighbours */
 				/* If it is at the boundary, it gets the opposite neighbour */
 				/* TODO: Obviously this does not consider the bottom and left neighbor */
@@ -130,8 +134,8 @@ int mod_relax_slope(unsigned int size, float* data, ModData* mod)
 				unsigned int ixy = c * size + (r == size-1 ? r-1 : r+1);
 
 				/* This scales gradient vector g by MaxSlope/|g| */
-				float dx = inp[ixx] - inp[ix];
-				float dy = inp[ixy] - inp[ix];
+				float dx = inp[ixx].h - inp[ix].h;
+				float dy = inp[ixy].h - inp[ix].h;
 				float sx = dx / scale;
 				float sy = dy / scale;
 				float g = MAX_SLOPE / sqrtf(sx*sx + sy*sy);

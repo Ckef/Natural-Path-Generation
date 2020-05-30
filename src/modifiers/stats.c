@@ -5,7 +5,7 @@
 #include <math.h>
 
 /*****************************/
-static float max_slope_1d(unsigned int size, float* data)
+static float max_slope_1d(unsigned int size, Vertex* data)
 {
 	float scale = GET_SCALE(size);
 
@@ -18,7 +18,7 @@ static float max_slope_1d(unsigned int size, float* data)
 		for(r = 0; r < size; ++r)
 		{
 			/* Get slope in x direction */
-			float s = (data[(c+1) * size + r] - data[c * size + r]) / scale;
+			float s = (data[(c+1) * size + r].h - data[c * size + r].h) / scale;
 			m = s > 0 ? (s > m ? s : m) : (-s > m ? -s : m);
 		}
 
@@ -26,7 +26,7 @@ static float max_slope_1d(unsigned int size, float* data)
 		for(r = 0; r < size-1; ++r)
 		{
 			/* Get slope in y direction */
-			float s = (data[c * size + r+1] - data[c * size + r]) / scale;
+			float s = (data[c * size + r+1].h - data[c * size + r].h) / scale;
 			m = s > 0 ? (s > m ? s : m) : (-s > m ? -s : m);
 		}
 
@@ -34,7 +34,7 @@ static float max_slope_1d(unsigned int size, float* data)
 }
 
 /*****************************/
-static float max_slope(unsigned int size, float* data)
+static float max_slope(unsigned int size, Vertex* data)
 {
 	float scale = GET_SCALE(size);
 
@@ -46,8 +46,8 @@ static float max_slope(unsigned int size, float* data)
 		{
 			/* Get the gradient */
 			/* If it is at the boundary, it gets the opposite neighbour */
-			float sx = (data[(c == size-1 ? c-1 : c+1) * size + r] - data[c * size + r]) / scale;
-			float sy = (data[c * size + (r == size-1 ? r-1 : r+1)] - data[c * size + r]) / scale;
+			float sx = (data[(c == size-1 ? c-1 : c+1) * size + r].h - data[c * size + r].h) / scale;
+			float sy = (data[c * size + (r == size-1 ? r-1 : r+1)].h - data[c * size + r].h) / scale;
 			float g = sqrtf(sx * sx + sy * sy);
 
 			m = g > m ? g : m;
@@ -57,7 +57,7 @@ static float max_slope(unsigned int size, float* data)
 }
 
 /*****************************/
-static float total_supplies(unsigned int size, float* data)
+static float total_supplies(unsigned int size, Vertex* data)
 {
 	/* Total supplies */
 	/* Thinking in Earth Mover's Distance terms, */
@@ -66,13 +66,13 @@ static float total_supplies(unsigned int size, float* data)
 	float t = 0;
 	unsigned int i;
 	for(i = 0; i < size * size; ++i)
-		t += data[i];
+		t += data[i].h;
 
 	return t;
 }
 
 /*****************************/
-int mod_stats(unsigned int size, float* data, ModData* mod)
+int mod_stats(unsigned int size, Vertex* data, ModData* mod)
 {
 	output("");
 	output("-- Terrain Stats --");

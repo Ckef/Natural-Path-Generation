@@ -1,9 +1,14 @@
 
 #include "output.h"
 #include "patch.h"
+#include "scene.h"
 #include <float.h>
 #include <math.h>
 #include <stdlib.h>
+
+/* Hardcoded cost defines for now */
+#define COST_LIN  10000
+#define COST_POW  2
 
 /* Some macros to make A* a bit easier */
 /* Firstly accessing data of a node */
@@ -15,8 +20,8 @@
 /* Compare two nodes */
 #define EQUAL(a,b) (a.c == b.c && a.r == b.r)
 
-/* And the heuristic, L2 distance */
-#define H(a,b) sqrtf(((int)a.c-(int)b.c)*((int)a.c-(int)b.c) + ((int)a.r-(int)b.r)*((int)a.r-(int)b.r))
+/* The L2 distance (i.e. Euclidean ground distance) from one node to another */
+#define D(a,b) sqrtf(((int)a.c-(int)b.c)*((int)a.c-(int)b.c) + ((int)a.r-(int)b.r)*((int)a.r-(int)b.r))
 
 /* A* node */
 typedef struct
@@ -47,31 +52,53 @@ typedef struct
 
 
 /*****************************/
-static void heapify(
+static void heapify_up(
 	AHeap*       heap,
 	unsigned int i,
 	unsigned int size,
 	ANodeData*   AND)
 {
-	/* So get the smallest node if i and its two children */
+	/* Check if its smaller than its parent */
+	unsigned int p = (i-1) >> 1;
+
+	if(i > 0 && SCORE(heap->data[i]) < SCORE(heap->data[p]))
+	{
+		/* Now swap i with its parent */
+		ANode t = heap->data[i];
+		heap->data[i] = heap->data[p];
+		heap->data[p] = t;
+
+		/* And heapify the parent i's now at */
+		heapify_up(heap, p, size, AND);
+	}
+}
+
+/*****************************/
+static void heapify_down(
+	AHeap*       heap,
+	unsigned int i,
+	unsigned int size,
+	ANodeData*   AND)
+{
+	/* So get the smallest node of i and its two children */
+	unsigned int s = i;
 	unsigned int l = (i << 1) + 1;
 	unsigned int r = (i << 1) + 2;
-	unsigned int m = i;
 
-	if(l < heap->size && SCORE(heap->data[l]) < SCORE(heap->data[m]))
-		m = l;
-	if(r < heap->size && SCORE(heap->data[r]) < SCORE(heap->data[m]))
-		m = r;
+	if(l < heap->size && SCORE(heap->data[l]) < SCORE(heap->data[s]))
+		s = l;
+	if(r < heap->size && SCORE(heap->data[r]) < SCORE(heap->data[s]))
+		s = r;
 
-	if(m != i)
+	if(s != i)
 	{
 		/* Now swap i with the smallest child */
 		ANode t = heap->data[i];
-		heap->data[i] = heap->data[m];
-		heap->data[m] = t;
+		heap->data[i] = heap->data[s];
+		heap->data[s] = t;
 
 		/* And heapify the child i's at now */
-		heapify(heap, m, size, AND);
+		heapify_down(heap, s, size, AND);
 	}
 }
 
@@ -82,6 +109,8 @@ static int find_path(
 	ANode        start,
 	ANode        goal)
 {
+	float scale = GET_SCALE(size);
+
 	/* So we're just gonna A* this bitch */
 	/* L2 distance is used as heuristic */
 	/* First we need to keep track of a bunch of things per node */
@@ -92,10 +121,15 @@ static int find_path(
 		return 0;
 	}
 
-	/* Initialize the score of all nodes to max */
+	/* Initialize the cost of all nodes to max */
+	/* Also set the previous node to undefined (i.e. >= size of terrain) */
 	unsigned int i;
 	for(i = 0; i < size * size; ++i)
+	{
+		AND[i].prev.c = size;
+		AND[i].prev.r = size;
 		AND[i].cost = FLT_MAX;
+	}
 
 	/* So we need a a min-heap to get nodes based on score */
 	AHeap Q;
@@ -110,21 +144,32 @@ static int find_path(
 	}
 
 	/* At first we only need the start node in the heap */
+	Q.data[0] = start;
 	PREV(start) = start;
 	COST(start) = 0;
-	SCORE(start) = H(start, goal);
-	Q.data[0] = start;
+	SCORE(start) = D(start, goal) * scale;
 
 	/* Now keep iterating over the frontier of discovered nodes */
 	/* Each time, get the one with the lowest score */
 	/* Which is the first node in the min-heap :) */
 	while(Q.size > 0)
 	{
+		ANode u = Q.data[0];
+
 		/* If we've reached the goal, hurray! */
-		if(EQUAL(Q.data[0], goal))
+		if(EQUAL(u, goal))
 		{
-			/* TODO: Color the path from start to goal red */
-			/* i.e. set their flags to 1 */
+			/* Color the path from start to goal */
+			/* i.e. add 1 to their flags */
+			while(!EQUAL(u, start))
+			{
+				data[u.c * size + u.r].flags |= 1;
+				u = PREV(u);
+			}
+
+			/* Don't forget to color the start */
+			data[start.c * size + start.r].flags |= 1;
+
 			free(Q.data);
 			free(AND);
 			return 1;
@@ -132,10 +177,54 @@ static int find_path(
 
 		/* Remove the node from the heap */
 		Q.data[0] = Q.data[--Q.size];
-		heapify(&Q, 0, size, AND);
+		heapify_down(&Q, 0, size, AND);
 
 		/* Loop over its neighbors */
-		/* TODO: well loop over its neighbors */
+		int c, r;
+		for(c = (int)u.c-1; c <= (int)u.c+1; ++c)
+			for(r = (int)u.r-1; r <= (int)u.r+1; ++r)
+			{
+				ANode v = { .c = c, .r = r};
+
+				/* Skip if its outside the terrain */
+				if(c < 0 || c >= (int)size || r < 0 || r >= (int)size)
+					continue;
+
+				/* Skip if its equal to its parent */
+				if(EQUAL(u,v))
+					continue;
+
+				/* Calculate the cost for this neighbor */
+				/* So basically the cost from u to v is: */
+				/* distance + slope cost * distance */
+				/* Where the slope cost has a power and linear component */
+				float dist = D(u,v) * scale;
+				float slope =
+					(data[v.c * size + v.r].h -
+					data[u.c * size + u.r].h) / dist;
+
+				slope = slope > 0 ? slope : -slope;
+				float alt = COST(u) + dist * (1 + powf(slope, COST_POW) * COST_LIN);
+
+				/* If the alternative cost is smaller, set new path */
+				if(alt < COST(v))
+				{
+					COST(v) = alt;
+					SCORE(v) = alt + D(v, goal) * scale;
+
+					/* Add the neighbor to the heap if it hasn't been in there yet */
+					/* We check this by the previous node we came from */
+					/* If it is undefined, it was apparently never reached yet */
+					if(PREV(v).c >= size || PREV(v).r >= size)
+					{
+						Q.data[Q.size++] = v;
+						heapify_up(&Q, Q.size-1, size, AND);
+					}
+
+					/* Now we can update the path */
+					PREV(v) = u;
+				}
+			}
 	}
 
 	/* Free all the things */

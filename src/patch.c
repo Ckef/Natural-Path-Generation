@@ -39,9 +39,9 @@ static int upload_vertex_data(Patch* patch)
 			/* Determine color from the flags */
 			if(patch->data[i].flags & 1)
 			{
-				/* Some green terrain */
-				data[i*9+6] = 0;
-				data[i*9+7] = 1;
+				/* Some red terrain */
+				data[i*9+6] = 1;
+				data[i*9+7] = 0;
 				data[i*9+8] = 0;
 			}
 			else

@@ -7,7 +7,7 @@
 #include <string.h>
 
 /* Hardcoded slope constraint for now */
-#define MAX_SLOPE       0.005f
+#define MAX_SLOPE       0.0025f
 #define MAX_ITERATIONS  10000
 #define STEP_SIZE       10
 

@@ -6,9 +6,10 @@
 #include <math.h>
 #include <stdlib.h>
 
-/* Hardcoded cost defines for now */
-#define COST_LIN  10000
-#define COST_POW  2
+/* Hardcoded path parameters for now */
+#define PATH_RADIUS  2.2f
+#define COST_LIN     10000
+#define COST_POW     1.8f
 
 /* Some macros to make A* a bit easier */
 /* Firstly accessing data of a node */
@@ -103,6 +104,35 @@ static void heapify_down(
 }
 
 /*****************************/
+static void flag_ellipse(
+	unsigned int size,
+	Vertex*      data,
+	ANode        center,
+	float        rx,
+	float        ry,
+	int          flags)
+{
+	/* Loop over all vertices in its bounding box */
+	/* Yeah we're using signed integers... uum could be bettter? */
+	int c, r;
+	for(c = (int)(-rx); c <= (int)rx; ++c)
+		for(r = (int)(-ry); r <= (int)ry; ++r)
+		{
+			/* Validate the node */
+			int cc = (int)center.c + c;
+			int rr = (int)center.r + r;
+
+			if(cc < 0 || cc >= (int)size || rr < 0 || rr >= (int)size)
+				continue;
+
+			/* Now check if it's inside our ellipse */
+			float d = (c*(float)c) / (rx*rx) + (r*(float)r) / (ry*ry);
+			if(d <= 1)
+				data[cc * size + rr].flags |= flags;
+		}
+}
+
+/*****************************/
 static int find_path(
 	unsigned int size,
 	Vertex*      data,
@@ -163,12 +193,12 @@ static int find_path(
 			/* i.e. add 1 to their flags */
 			while(!EQUAL(u, start))
 			{
-				data[u.c * size + u.r].flags |= 1;
+				flag_ellipse(size, data, u, PATH_RADIUS, PATH_RADIUS, 1);
 				u = PREV(u);
 			}
 
 			/* Don't forget to color the start */
-			data[start.c * size + start.r].flags |= 1;
+			flag_ellipse(size, data, start, PATH_RADIUS, PATH_RADIUS, 1);
 
 			free(Q.data);
 			free(AND);
@@ -180,6 +210,7 @@ static int find_path(
 		heapify_down(&Q, 0, size, AND);
 
 		/* Loop over its neighbors */
+		/* Again signed integers... ? */
 		int c, r;
 		for(c = (int)u.c-1; c <= (int)u.c+1; ++c)
 			for(r = (int)u.r-1; r <= (int)u.r+1; ++r)

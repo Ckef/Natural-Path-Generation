@@ -55,6 +55,7 @@ static float max_slope(unsigned int size, Vertex* data, int flags)
 
 			/* Get the gradient */
 			/* If it is at the boundary, it gets the opposite neighbour */
+			/* TODO: Obviously this does not consider the bottom and left neighbor */
 			float sx = (data[(c == size-1 ? c-1 : c+1) * size + r].h - data[c * size + r].h) / scale;
 			float sy = (data[c * size + (r == size-1 ? r-1 : r+1)].h - data[c * size + r].h) / scale;
 			float g = sqrtf(sx * sx + sy * sy);

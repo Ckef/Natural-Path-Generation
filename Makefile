@@ -19,7 +19,7 @@ help:
 	@echo "~~~~~~~~~~~~~~~~~~~"
 	@echo "make clean      Clean temporary files."
 	@echo "make terr       Build the program."
-	@echo "./terr <m> <r>  Run the build."
+	@echo "./terr <mode> <resolution>"
 
 
 ###############################

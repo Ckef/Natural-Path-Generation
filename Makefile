@@ -19,7 +19,7 @@ help:
 	@echo "~~~~~~~~~~~~~~~~~~~"
 	@echo "make clean      Clean temporary files."
 	@echo "make terr       Build the program."
-	@echo "./terr <m> <r>  Run the build."
+	@echo "./terr <mode> <resolution>"
 
 
 ###############################
@@ -72,6 +72,7 @@ OBJS = \
  $(OUT)/modifiers/flatten.o \
  $(OUT)/modifiers/relax_slope.o \
  $(OUT)/modifiers/stats.o \
+ $(OUT)/modifiers/subdivide.o \
  $(OUT)/output.o \
  $(OUT)/patch.o \
  $(OUT)/scene.o \

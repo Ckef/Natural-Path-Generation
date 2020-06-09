@@ -1,9 +1,10 @@
 
 #include "output.h"
+#include "patch.h"
 #include <stdlib.h>
 
 /*****************************/
-int gen_mpd(unsigned int size, float* data)
+int gen_mpd(unsigned int size, Vertex* data)
 {
 	/* Check if it is in the form 2^N+1 */
 	if(((size-1) & (size-2)) != 0)
@@ -13,10 +14,10 @@ int gen_mpd(unsigned int size, float* data)
 	}
 
 	/* Initialize corners */
-	data[0]             = .5f;
-	data[size-1]        = .5f;
-	data[size*size-1]   = .5f;
-	data[size*(size-1)] = .5f;
+	data[0].h             = .5f;
+	data[size-1].h        = .5f;
+	data[size*size-1].h   = .5f;
+	data[size*(size-1)].h = .5f;
 
 	/* Iterate over all step sizes, i.e. 'frequencies' */
 	float scale = 1.0f;
@@ -35,8 +36,8 @@ int gen_mpd(unsigned int size, float* data)
 				unsigned int cent = (c+(step>>1)) * size + r+(step>>1);
 
 				/* Set a new center point */
-				float val = data[tl] + data[bl] + data[tr] + data[br];
-				data[cent] = val/4 + scale * (rand() / (float)RAND_MAX - .5f);
+				float val = data[tl].h + data[bl].h + data[tr].h + data[br].h;
+				data[cent].h = val/4 + scale * (rand() / (float)RAND_MAX - .5f);
 			}
 
 		/* Iterate over all diamonds */
@@ -54,12 +55,12 @@ int gen_mpd(unsigned int size, float* data)
 				float val = 0;
 				unsigned int a = 0;
 
-				if(c > 0) val += data[le], ++a;
-				if(r > 0) val += data[to], ++a;
-				if(c < size-1) val += data[ri], ++a;
-				if(r < size-1) val += data[bo], ++a;
+				if(c > 0) val += data[le].h, ++a;
+				if(r > 0) val += data[to].h, ++a;
+				if(c < size-1) val += data[ri].h, ++a;
+				if(r < size-1) val += data[bo].h, ++a;
 
-				data[cent] = val/a + scale * (rand() / (float)RAND_MAX - .5f);
+				data[cent].h = val/a + scale * (rand() / (float)RAND_MAX - .5f);
 			}
 	}
 

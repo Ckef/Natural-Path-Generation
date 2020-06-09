@@ -14,16 +14,25 @@ typedef enum
 } ModMode;
 
 
+/* A vertex */
+typedef struct
+{
+	float h;
+	int flags; /* To signify what constraints apply */
+
+} Vertex;
+
+
 /* Intermediate data for iterative modification */
 typedef struct
 {
 	void*        mod;        /* In reality a function pointer to the modifier in question */
 	ModMode      mode;
-	float*       snap; /* TODO: Not yet operational */
+	Vertex*      snap; /* TODO: Not yet operational */
 
 	int          done;       /* Non-zero when no iterations will be done anymore */
 	unsigned int iterations; /* Number of iterations done */
-	float*       buffer;
+	Vertex*      buffer;
 
 } ModData;
 
@@ -34,7 +43,7 @@ typedef struct
 	vec3 pos; /* Position, modify at free will */
 
 	unsigned int size; /* Width and height in vertices (always a square) */
-	float*       data; /* Column-major, generally speaking values are in [0,1] */
+	Vertex*      data; /* Column-major, generally speaking values are in [0,1] */
 	ModData*     mods; /* Modifiers running 'in the background' */
 	size_t       num_mods;
 	ModMode      mode;
@@ -53,7 +62,7 @@ typedef struct
  * @param  data  Output data array of size * size length (column-major).
  * @return       Zero if the generation failed for some reason.
  */
-typedef int (*PatchGenerator)(unsigned int size, float* data);
+typedef int (*PatchGenerator)(unsigned int size, Vertex* data);
 
 /**
  * Patch modifier, yet again, a function pointer.
@@ -63,7 +72,7 @@ typedef int (*PatchGenerator)(unsigned int size, float* data);
  * @param  mod   Modifier specific data to pass.
  * @return       Zero if the modification failed for some reason.
  */
-typedef int (*PatchModifier)(unsigned int size, float* data, ModData* mod);
+typedef int (*PatchModifier)(unsigned int size, Vertex* data, ModData* mod);
 
 /**
  * Creates a new patch of some specified size.

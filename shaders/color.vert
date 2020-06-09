@@ -2,7 +2,7 @@
 #version 420 core
 // Input vertex data
 layout (location = 0) in vec3 pos;
-layout (location = 1) in vec3 col;
+layout (location = 2) in vec3 col;
 
 // Output vertex color
 out vec3 color;

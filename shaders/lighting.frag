@@ -13,6 +13,6 @@ const float AmbientLight  = 0.2;
 
 void main()
 {
-	float diff = dot(normal, normalize(-LightDirection));
+	float diff = max(dot(normal, normalize(-LightDirection)), 0);
 	FragColor = vec4((diff + AmbientLight) * color, 1);
 }

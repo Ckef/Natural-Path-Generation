@@ -157,12 +157,12 @@ int create_scene(Scene* scene, ModMode mode, unsigned int patchSize)
 	GLsizei attrSize = sizeof(float) * 3;
 	glBindVertexArray(scene->help_vao);
 	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
 
 	glVertexAttribPointer(
 		0, 3, GL_FLOAT, GL_FALSE, attrSize * 2, (GLvoid*)0);
 	glVertexAttribPointer(
-		1, 3, GL_FLOAT, GL_FALSE, attrSize * 2, (GLvoid*)(uintptr_t)attrSize);
+		2, 3, GL_FLOAT, GL_FALSE, attrSize * 2, (GLvoid*)(uintptr_t)attrSize);
 
 	return 1;
 }
@@ -290,6 +290,7 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 	if(key == GLFW_KEY_ENTER && action == GLFW_PRESS)
 	{
 		PatchModifier mods[] = {
+			mod_subdivide,
 			mod_stats,
 			mod_relax_slope,
 			mod_stats,

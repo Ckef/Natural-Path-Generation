@@ -10,6 +10,11 @@
 int mod_stats(unsigned int size, Vertex* data, ModData* mod);
 
 /**
+ * Outputs the terrain to an output .txt file.
+ */
+int mod_output(unsigned int size, Vertex* data, ModData* mod);
+
+/**
  * Makes a subdivision of the terrain.
  * Each region has its own constraints (i.e. flags).
  */

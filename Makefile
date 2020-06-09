@@ -70,6 +70,7 @@ OBJS = \
  $(OUT)/generators/mpd.o \
  $(OUT)/generators/noise.o \
  $(OUT)/modifiers/flatten.o \
+ $(OUT)/modifiers/output.o \
  $(OUT)/modifiers/relax_slope.o \
  $(OUT)/modifiers/stats.o \
  $(OUT)/modifiers/subdivide.o \

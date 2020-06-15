@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 /* Hardcoded output file for now */
-#define OUT_FILE "terrain_out.txt"
+#define OUT_FILE "terrain_out.json"
 
 /*****************************/
 int mod_output(unsigned int size, Vertex* data, ModData* mod)
@@ -19,6 +19,7 @@ int mod_output(unsigned int size, Vertex* data, ModData* mod)
 
 	/* Output the terrain to the file */
 	/* We output it as a matrix, so [ [...],[...],...,[...] ] */
+	/* Note this is just a JSON array :) */
 	fputs("[\n", f);
 
 	/* The output is column-major */

@@ -7,6 +7,7 @@
 *.Debug*
 *.depend
 *.fuse_hidden*
+*.json
 *.layout
 *.npp
 *.suo
@@ -15,6 +16,7 @@
 *.swp
 *.temp
 *.txt
+
 *~
 
 # directories

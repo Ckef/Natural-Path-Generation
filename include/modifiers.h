@@ -10,7 +10,7 @@
 int mod_stats(unsigned int size, Vertex* data, ModData* mod);
 
 /**
- * Outputs the terrain to an output .txt file.
+ * Outputs the terrain to an output .json file.
  */
 int mod_output(unsigned int size, Vertex* data, ModData* mod);
 

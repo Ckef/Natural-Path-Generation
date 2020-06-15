@@ -3,6 +3,7 @@
 *.cbp
 *.cbTemp
 *.csproj*
+*.dat
 *.Debug*
 *.depend
 *.fuse_hidden*
@@ -13,6 +14,7 @@
 *.swo
 *.swp
 *.temp
+*.txt
 *~
 
 # directories
@@ -21,5 +23,3 @@
 
 # Hardcoded heh
 terr
-*.txt
-*opl/

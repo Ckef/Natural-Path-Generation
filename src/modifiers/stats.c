@@ -46,22 +46,37 @@ static float max_slope(unsigned int size, Vertex* data, int flags)
 
 	/* Maximum 2D slope, i.e. the magnitude of the gradient vector */
 	float m = 0;
-	unsigned int c, r;
-	for(c = 0; c < size; ++c)
-		for(r = 0; r < size; ++r)
+	unsigned int ix;
+	for(ix = 0; ix < size*size; ++ix)
+	{
+		if(!(data[ix].flags & flags))
+			continue;
+
+		/* Loop over all 4 cardinal directions */
+		unsigned int d;
+		for(d = 0; d < 4; ++d)
 		{
-			if(!(data[c * size + r].flags & flags))
+			/* Get the vertex in question and its two neighbours */
+			/* This loops over all 4 cardinal directions */
+			/* Rotating the neighbours clockwise around their center */
+			/* Yes they're signed integers... */
+			int ixx = ix +
+				((d == 0) ? (int)size : (d == 1) ? -1 : (d == 2) ? -(int)size : 1);
+			int ixy = ix +
+				((d == 0) ? 1 : (d == 1) ? (int)size : (d == 2) ? -1 : -(int)size);
+
+			/* Check bounds */
+			if(ixx < 0 || ixx >= (int)(size*size) || ixy < 0 || ixy >= (int)(size*size))
 				continue;
 
 			/* Get the gradient */
-			/* If it is at the boundary, it gets the opposite neighbour */
-			/* TODO: Obviously this does not consider the bottom and left neighbor */
-			float sx = (data[(c == size-1 ? c-1 : c+1) * size + r].h - data[c * size + r].h) / scale;
-			float sy = (data[c * size + (r == size-1 ? r-1 : r+1)].h - data[c * size + r].h) / scale;
+			float sx = (data[ixx].h - data[ix].h) / scale;
+			float sy = (data[ixy].h - data[ix].h) / scale;
 			float g = sqrtf(sx * sx + sy * sy);
 
 			m = g > m ? g : m;
 		}
+	}
 
 	return m;
 }

@@ -101,9 +101,10 @@ int mod_relax_slope(unsigned int size, Vertex* data, ModData* mod)
 
 	/* Now define the input buffer */
 	/* For parallelism we use the buffer, otherwise just data */
-	/* Also define a weight */
+	/* Also define a weight as 1/(4*4) */
+	/* Each point is touched 4 times by each of the 4 cardinal directions */
 	Vertex* inp = mod->mode == PARALLEL ? mod->buffer : data;
-	float w = mod->mode == PARALLEL ? .25f : 1;
+	float w = mod->mode == PARALLEL ? .0625f : 1;
 
 	/* Count the number of iterations */
 	unsigned int i = 0;
@@ -118,20 +119,30 @@ int mod_relax_slope(unsigned int size, Vertex* data, ModData* mod)
 			memcpy(mod->buffer, data, buffSize);
 
 		/* Loop over all vertices */
-		unsigned int c, r;
-		for(c = 0; c < size; ++c)
-			for(r = 0; r < size; ++r)
-			{
-				/* Check if the gradient constraint applies */
-				if(!(inp[c * size + r].flags & 1))
-					continue;
+		unsigned int ix;
+		for(ix = 0; ix < size*size; ++ix)
+		{
+			/* Check if the gradient constraint applies */
+			if(!(inp[ix].flags & 1))
+				continue;
 
+			/* Loop over all 4 cardinal directions */
+			unsigned int d;
+			for(d = 0; d < 4; ++d)
+			{
 				/* Get the vertex in question and its two neighbours */
-				/* If it is at the boundary, it gets the opposite neighbour */
-				/* TODO: Obviously this does not consider the bottom and left neighbor */
-				unsigned int ix = c * size + r;
-				unsigned int ixx = (c == size-1 ? c-1 : c+1) * size + r;
-				unsigned int ixy = c * size + (r == size-1 ? r-1 : r+1);
+				/* This loops over all 4 cardinal directions */
+				/* Rotating the neighbours clockwise around their center */
+				/* Yes they're signed integers... */
+				int ixx = ix +
+					((d == 0) ? (int)size : (d == 1) ? -1 : (d == 2) ? -(int)size : 1);
+				int ixy = ix +
+					((d == 0) ? 1 : (d == 1) ? (int)size : (d == 2) ? -1 : -(int)size);
+
+				/* Check bounds */
+				/* TODO: Exactly at the boundaries, the weight should actually be a bit lower */
+				if(ixx < 0 || ixx >= (int)(size*size) || ixy < 0 || ixy >= (int)(size*size))
+					continue;
 
 				/* This scales gradient vector g by MaxSlope/|g| */
 				float dx = inp[ixx].h - inp[ix].h;
@@ -153,6 +164,7 @@ int mod_relax_slope(unsigned int size, Vertex* data, ModData* mod)
 				done &= move_slope(dy, scale, data + ix, data + ixy, b, w);
 				*/
 			}
+		}
 
 		/* Exit if no changes were made */
 		/* Or when the maximum number of iterations ended */

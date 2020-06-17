@@ -4,7 +4,13 @@
 		<config default="true" name="EMD" category="opl">
 			<ref name="EMD.mod" type="model">
 			</ref>
-			<ref name="terrains.dat" type="data">
+			<ref name="emd.dat" type="data">
+			</ref>
+		</config>
+		<config default="false" name="PathGen" category="opl">
+			<ref name="PathGen.mod" type="model">
+			</ref>
+			<ref name="gen.dat" type="data">
 			</ref>
 		</config>
 	</configs>

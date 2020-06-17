@@ -1,11 +1,12 @@
 /*********************************************
  * OPL 12.9.0.0 Model
  * Author: stef
- * Creation Date: Jun 9, 2020 at 5:45:57 PM
+ * Creation Date: Jun 18, 2020 at 12:12:07 AM
  *********************************************/
 
 int TC = 5; // Terrain width (number of columns)
 int TR = 5; // Terrain height (number of rows)
+int Sigma = 8; // Cost of creating/destroying, in this case, Sigma >= all d_ij
 
 // TScale would be the distance between two adjacent vertices
 float TScale = (129-1)/(maxl(TC,TR)-1); // See the C project for this rule
@@ -14,17 +15,21 @@ float TScale = (129-1)/(maxl(TC,TR)-1); // See the C project for this rule
 range DimC = 0..TC-1;
 range DimR = 0..TR-1;
 
-// The EMD input (L) and output (H)
+// The EMD input (L)
 float L[DimC][DimR] = ...;
-float H[DimC][DimR] = ...;
 
-// The flow matrix we are trying to find
+// Decision variables
+// Now the output (H) is a decision variable
+dvar float H[DimC][DimR];
 dvar float F[DimC][DimR][DimC][DimR];
 
 // Minimization definition
 minimize
-  sum(ic in DimC, ir in DimR, jc in DimC, jr in DimR)
-    F[ic][ir][jc][jr] * sqrt((ic-jc)*(ic-jc) + (ir-jr)*(ir-jr)) * TScale;
+  (sum(ic in DimC, ir in DimR, jc in DimC, jr in DimR)
+    F[ic][ir][jc][jr] * sqrt((ic-jc)*(ic-jc) + (ir-jr)*(ir-jr)) * TScale) +
+  Sigma * abs(
+    sum(ic in DimC, ir in DimR) L[ic][ir] -
+    sum(jc in DimC, jr in DimR) H[jc][jr]);
 
 // Constraint definitions
 subject to{
@@ -44,13 +49,16 @@ subject to{
 }
 
 // Now calculate the actual EMD
-float Cost = sum(ic in DimC, ir in DimR, jc in DimC, jr in DimR)
-  F[ic][ir][jc][jr] * sqrt((ic-jc)*(ic-jc) + (ir-jr)*(ir-jr)) * TScale;
+float Cost = (sum(ic in DimC, ir in DimR, jc in DimC, jr in DimR)
+  F[ic][ir][jc][jr] * sqrt((ic-jc)*(ic-jc) + (ir-jr)*(ir-jr)) * TScale) +
+  Sigma * abs(
+    sum(ic in DimC, ir in DimR) L[ic][ir] -
+    sum(jc in DimC, jr in DimR) H[jc][jr]);
 float Flow = sum(ic in DimC, ir in DimR, jc in DimC, jr in DimR)
   F[ic][ir][jc][jr];
     
 execute DISPLAY_RESULTS {
   writeln("Cost=", Cost);
   writeln("Flow=", Flow);
-  writeln("EMD=", Cost/Flow);
 }
+ 

@@ -5,6 +5,7 @@
 #include "output.h"
 #include "scene.h"
 #include <stdlib.h>
+#include <string.h>
 
 /*****************************/
 static int add_patch(Scene* scene, PatchGenerator generator, PatchModifier* mods)
@@ -20,19 +21,22 @@ static int add_patch(Scene* scene, PatchGenerator generator, PatchModifier* mods
 	}
 
 	scene->patches = new;
+	new += scene->num_patches;
 
 	/* Create a new patch */
-	if(!create_patch(new + scene->num_patches, scene->patch_mode, scene->patch_size))
+	if(!create_patch(new, scene->patch_mode, scene->patch_size))
 	{
 		throw_error("Could not create a new patch for scene.");
 		return 0;
 	}
 
 	/* Set its position to the current selection */
-	glm_vec3_copy(scene->help_pos, new[scene->num_patches].pos);
+	new->pos[0] = scene->help_pos[0] * (DEF_PATCH_SIZE-1);
+	new->pos[1] = scene->help_pos[1] * (DEF_PATCH_SIZE-1);
+	new->pos[2] = scene->help_pos[2] * (DEF_PATCH_SIZE-1);
 
 	/* Populate the new patch */
-	if(!populate_patch(new + scene->num_patches, generator, mods))
+	if(!populate_patch(new, generator, mods))
 	{
 		throw_error("Population of newly created patch failed.");
 		return 0;
@@ -52,19 +56,24 @@ static void update_camera(Scene* scene, double dTime)
 	glm_mat4_identity(scene->camera.view);
 
 	vec3 mov;
-	vec3 x    = {1,0,0};
-	vec3 y    = {0,1,0};
-	vec3 z    = {0,0,1};
+	vec3 x = {1,0,0};
+	vec3 y = {0,1,0};
+	vec3 z = {0,0,1};
 	vec3 back = {0,-40, -40};
 	vec3 cent = {(DEF_PATCH_SIZE-1)/2.0f, (DEF_PATCH_SIZE-1)/2.0f, 0};
 
 	/* Update position */
-	glm_vec3_copy(scene->cam_dest, mov);
+	vec3 dest = {
+		scene->cam_dest[0] * (DEF_PATCH_SIZE-1),
+		scene->cam_dest[1] * (DEF_PATCH_SIZE-1),
+		scene->cam_dest[2] * (DEF_PATCH_SIZE-1)};
+
+	glm_vec3_copy(dest, mov);
 	glm_vec3_sub(mov, scene->cam_pos, mov);
 	float ml = glm_vec3_norm(mov);
 
 	if(CAM_SPEED * dTime >= ml)
-		glm_vec3_copy(scene->cam_dest, scene->cam_pos);
+		glm_vec3_copy(dest, scene->cam_pos);
 	else
 	{
 		glm_vec3_scale(mov, CAM_SPEED * dTime / ml, mov);
@@ -116,15 +125,15 @@ int create_scene(Scene* scene, ModMode mode, unsigned int patchSize)
 
 	/* Setup camera */
 	/* The update_camera takes care of the view and pv matrices */
+	memset(scene->cam_dest, 0, sizeof(scene->cam_dest));
 	glm_mat4_identity(scene->camera.proj);
-	glm_vec3_zero(scene->cam_dest);
 	glm_vec3_zero(scene->cam_pos);
 	scene->cam_rotating = 0;
 	scene->cam_angle = 0.0f;
 	update_camera(scene, 0.0);
 
 	/* Make sure to initialize the helper position here */
-	glm_vec3_zero(scene->help_pos);
+	memset(scene->help_pos, 0, sizeof(scene->help_pos));
 	scene->patches = NULL;
 	scene->num_patches = 0;
 
@@ -217,7 +226,12 @@ void draw_scene(Scene* scene)
 	glUseProgram(scene->help_shader.program);
 	loc = glGetUniformLocation(scene->help_shader.program, "MVP");
 
-	glm_translate_to(scene->camera.pv, scene->help_pos, mvp);
+	vec3 hpos = {
+		scene->help_pos[0] * (DEF_PATCH_SIZE-1),
+		scene->help_pos[1] * (DEF_PATCH_SIZE-1),
+		scene->help_pos[2] * (DEF_PATCH_SIZE-1)};
+
+	glm_translate_to(scene->camera.pv, hpos, mvp);
 	glUniformMatrix4fv(loc, 1, GL_FALSE, (float*)mvp);
 
 	/* Draw helper geometry */
@@ -231,9 +245,9 @@ void update_scene(Scene* scene, double dTime)
 {
 	if(
 		/* If the camera is moving or rotating, update it */
-		scene->cam_dest[0] != scene->cam_pos[0] ||
-		scene->cam_dest[1] != scene->cam_pos[1] ||
-		scene->cam_dest[2] != scene->cam_pos[2] ||
+		scene->cam_dest[0] * (DEF_PATCH_SIZE-1) != scene->cam_pos[0] ||
+		scene->cam_dest[1] * (DEF_PATCH_SIZE-1) != scene->cam_pos[1] ||
+		scene->cam_dest[2] * (DEF_PATCH_SIZE-1) != scene->cam_pos[2] ||
 		scene->cam_rotating)
 	{
 		update_camera(scene, dTime);
@@ -268,23 +282,23 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 
 	/* Move the camera */
 	if(key == GLFW_KEY_W && action == GLFW_PRESS)
-		scene->cam_dest[1] += DEF_PATCH_SIZE-1;
+		scene->cam_dest[1] += 1;
 	if(key == GLFW_KEY_S && action == GLFW_PRESS)
-		scene->cam_dest[1] -= DEF_PATCH_SIZE-1;
+		scene->cam_dest[1] -= 1;
 	if(key == GLFW_KEY_A && action == GLFW_PRESS)
-		scene->cam_dest[0] -= DEF_PATCH_SIZE-1;
+		scene->cam_dest[0] -= 1;
 	if(key == GLFW_KEY_D && action == GLFW_PRESS)
-		scene->cam_dest[0] += DEF_PATCH_SIZE-1;
+		scene->cam_dest[0] += 1;
 
 	/* Move the helper geometry */
 	if(key == GLFW_KEY_UP && action == GLFW_PRESS)
-		scene->help_pos[1] += DEF_PATCH_SIZE-1;
+		scene->help_pos[1] += 1;
 	if(key == GLFW_KEY_DOWN && action == GLFW_PRESS)
-		scene->help_pos[1] -= DEF_PATCH_SIZE-1;
+		scene->help_pos[1] -= 1;
 	if(key == GLFW_KEY_LEFT && action == GLFW_PRESS)
-		scene->help_pos[0] -= DEF_PATCH_SIZE-1;
+		scene->help_pos[0] -= 1;
 	if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
-		scene->help_pos[0] += DEF_PATCH_SIZE-1;
+		scene->help_pos[0] += 1;
 
 	/* Add a new patch */
 	if(key == GLFW_KEY_ENTER && action == GLFW_PRESS)

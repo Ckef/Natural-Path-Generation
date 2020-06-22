@@ -46,13 +46,13 @@ typedef struct
 	ModMode      patch_mode;
 
 	/* Selection (helper) graphics */
-	vec3   help_pos;
+	ivec3  help_pos;
 	GLuint help_vao;
 	GLuint help_buffer;
 	Shader help_shader;
 
 	/* Camera movements */
-	vec3  cam_dest;
+	ivec3 cam_dest;
 	vec3  cam_pos;
 	int   cam_rotating; /* -1, 0, 1 */
 	float cam_angle;

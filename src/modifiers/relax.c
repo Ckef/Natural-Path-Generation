@@ -312,7 +312,7 @@ int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 		/* Or when the maximum number of iterations ended */
 		if(done || mod->iterations == MAX_ITERATIONS)
 		{
-			output("Slope relaxation took %u iterations.", mod->iterations);
+			output("Relaxation took %u iterations.", mod->iterations);
 
 			free(mod->buffer);
 			mod->buffer = NULL;

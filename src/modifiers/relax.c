@@ -8,16 +8,13 @@
 
 /* Hardcoded slope constraint for now */
 #define MAX_SLOPE       0.0025f
-#define CONV_THRESHOLD  0.00001f /* Convergence threshold of slope error */
+#define S_THRESHOLD     0.00001f /* Convergence threshold of slope error */
+#define R_THRESHOLD     0.005f /* Convergence threshold of roughness error */
 #define MAX_ITERATIONS  10000
 #define STEP_SIZE       10
 
-/* Get if a point is a corner or edge, given an index and the scale of the terrain */
-#define IS_CORNER(i,size) (i==0||i==size-1||i==size*size-1||i==(size-1)*size)
-#define IS_EDGE(i,size)   (i<size||i>(size-1)*size||i%size==0||(i+1)%size==0)
-
 /* Check if two indices are on the same column */
-#define SAME_COLUMN(i,j,size) ((i/size) == (j/size))
+#define SAME_COLUMN(i,j,size) (((i)/size) == ((j)/size))
 
 /*****************************/
 static unsigned int move_slope(
@@ -29,7 +26,7 @@ static unsigned int move_slope(
 	float   weight)
 {
 	/* The current slope and the indices */
-	/* a is the lowest vertex, b the highest */
+	/* a is the lowest point, b the highest */
 	float s = delta / scale;
 	Vertex* b = (s > 0) ? o2 : o1;
 	Vertex* a = (s > 0) ? o1 : o2;
@@ -39,7 +36,7 @@ static unsigned int move_slope(
 	/* If we do not, it may never exit due to floating point errors */
 	/* We could calculate the error that could accumulate, but this is hard */
 	/* So we have this hardcoded threshold :) */
-	if(s > maxSlope + CONV_THRESHOLD)
+	if(s > maxSlope + S_THRESHOLD)
 	{
 		/* If the slope is too great, move a and b closer to each other */
 		float move = (s - maxSlope) * scale * .5f;
@@ -57,27 +54,29 @@ static unsigned int move_slope(
 static float calc_roughness(
 	unsigned int size,
 	Vertex*      data,
-	unsigned int ix)
+	unsigned int ix,
+	float        scale)
 {
-	float R2 = 0;
-
 	/* Loop over all neighbors and sum their differences */
+	float R2 = 0;
 	int c, r;
 	for(c = -1; c <= 1; ++c)
 		for(r = -1; r <= 1; ++r)
 		{
-			int ixx = ix + c * (int)size + r;
-			if((int)ix == ixx) continue;
+			if(c == 0 && r == 0) continue;
 
 			/* Check bounds */
+			int ixx = ix + c * (int)size + r;
 			if(ixx < 0 || (unsigned int)ixx >= size*size)
 				continue;
 			if(!SAME_COLUMN(ix + c * (int)size, ixx, size))
 				continue;
 
 			/* Suuuuuuuuuuuuuuuum */
-			float d = data[ix].h * data[ixx].h;
-			R2 += d*d;
+			/* Note we divide by scale to get slope */
+			/* This is so this metric is scale invariant */
+			float s = (data[ixx].h - data[ix].h) / scale;
+			R2 += s*s;
 		}
 
 	/* It's actually roughness squared */
@@ -88,18 +87,18 @@ static float calc_roughness(
 static int relax_slope(
 	unsigned int size,
 	unsigned int ix,
+	float        scale,
 	float        weight,
 	Vertex*      inp,
 	Vertex*      out)
 {
 	int done = 1;
-	float scale = GET_SCALE(size);
 
 	/* Loop over all 4 cardinal directions */
 	unsigned int d;
 	for(d = 0; d < 4; ++d)
 	{
-		/* Get the vertex in question and its two neighbours */
+		/* Get the point in question and its two neighbours */
 		/* This loops over all 4 cardinal directions */
 		/* Rotating the neighbours clockwise around their center */
 		/* Yes they're signed integers... */
@@ -121,20 +120,10 @@ static int relax_slope(
 		float dy = inp[ixy].h - inp[ix].h;
 		float sx = dx / scale;
 		float sy = dy / scale;
-		float g = MAX_SLOPE / sqrtf(sx*sx + sy*sy);
+		float G = MAX_SLOPE / sqrtf(sx*sx + sy*sy);
 
-		done &= move_slope(dx, scale, out + ix, out + ixx, (sx > 0 ? sx : -sx) * g, weight);
-		done &= move_slope(dy, scale, out + ix, out + ixy, (sy > 0 ? sy : -sy) * g, weight);
-
-		/* This applies different scales to the delta x and delta y */
-		/* It retains the ratio of the two directional delta's squared */
-		/*
-		float a = sqrtf(sx*sx / (sx*sx + sy*sy)) * MAX_SLOPE;
-		float b = sqrtf(sy*sy / (sx*sx + sy*sy)) * MAX_SLOPE;
-
-		done &= move_slope(dx, scale, out + ix, out + ixx, a, weight);
-		done &= move_slope(dy, scale, out + ix, out + ixy, b, weight);
-		*/
+		done &= move_slope(dx, scale, out + ix, out + ixx, (sx > 0 ? sx : -sx) * G, weight);
+		done &= move_slope(dy, scale, out + ix, out + ixy, (sy > 0 ? sy : -sy) * G, weight);
 	}
 
 	return done;
@@ -144,6 +133,7 @@ static int relax_slope(
 static int relax_dir_slope(
 	unsigned int size,
 	unsigned int ix,
+	float        scale,
 	float        weight,
 	Vertex*      inp,
 	Vertex*      out)
@@ -155,14 +145,70 @@ static int relax_dir_slope(
 static int relax_roughness(
 	unsigned int size,
 	unsigned int ix,
+	float        scale,
 	float        weight,
 	Vertex*      inp,
 	Vertex*      out)
 {
-	/* So first calculate the current roughness */
-	float R = calc_roughness(size, out, ix);
+	/* Get the factor to correct the current roughness to the desired one */
+	/* Each term is squared, so take the square root of this factor */
+	/* In here we check for the roughness threshold */
+	float R = calc_roughness(size, inp, ix, scale);
+	if(fabs(R - inp[ix].c) <= R_THRESHOLD)
+		return 1;
 
-	return 1;
+	R = sqrtf(inp[ix].c / R);
+
+	/* Smth to store the move values in */
+	float move[9] = {0};
+	float totMove = 0;
+
+	/* Now multiply each term with our factor */
+	int c, r;
+	for(c = -1; c <= 1; ++c)
+		for(r = -1; r <= 1; ++r)
+		{
+			if(c == 0 && r == 0) continue;
+
+			/* check bounds */
+			int ixx = ix + c * (int)size + r;
+			if(ixx < 0 || (unsigned int)ixx >= size*size)
+				continue;
+			if(!SAME_COLUMN(ix + c * (int)size, ixx, size))
+				continue;
+
+			/* And calculate how much we want to move the point */
+			/* We do not actually apply it yet */
+			/* We first calculate loss of supplies and add that loss to each point */
+			/* This way we preserve the EMD property */
+			unsigned int im = (c+1)*3+(r+1);
+
+			/* We actually calculate what we want to move as if the point is 1 unit away */
+			/* This so it all is scale invariant */
+			float s = (inp[ixx].h - inp[ix].h) / scale;
+			move[im] = s * R - s;
+			totMove += move[im];
+		}
+
+	/* Now get the total amount we want to move each point and do it */
+	totMove /= 9;
+	for(c = -1; c <= 1; ++c)
+		for(r = -1; r <= 1; ++r)
+		{
+			/* check bounds */
+			int ixx = ix + c * (int)size + r;
+			if(ixx < 0 || (unsigned int)ixx >= size*size)
+				continue;
+			if(!SAME_COLUMN(ix + c * (int)size, ixx, size))
+				continue;
+
+			/* Obviously apply the weight as well */
+			float m = (move[(c+1)*3+(r+1)] - totMove) * scale;
+			out[ixx].h += m * weight;
+		}
+
+	/* Well we modified something, so return 0 */
+	return 0;
 }
 
 /*****************************/
@@ -203,6 +249,8 @@ int mod_relax_slope_1d(unsigned int size, Vertex* data, ModData* mod)
 /*****************************/
 int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 {
+	float scale = GET_SCALE(size);
+
 	/* Allocate a buffer for input if it wasn't there yet */
 	/* We just leave it empty if no parallelism allowed */
 	size_t buffSize = sizeof(Vertex) * size * size;
@@ -222,7 +270,7 @@ int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 		unsigned int ix;
 		for(ix = 0; ix < size*size; ++ix)
 			if(data[ix].flags & ROUGHNESS)
-				data[ix].c = calc_roughness(size, data, ix);
+				data[ix].c = calc_roughness(size, data, ix, scale);
 	}
 
 	/* Now define the input buffer */
@@ -230,10 +278,11 @@ int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 	Vertex* inp = mod->mode == PARALLEL ? mod->buffer : data;
 
 	/* And also define a weight */
-	/* Each point is touched 4 times by each of the 4 cardinal directions */
-	/* So that's a weight of 1/(4*4) = 1/16 for any point */
-	/* Do note: each vertex needs to have the same weight to preserve the EMD property */
-	float weight = mod->mode == PARALLEL ? 1/16.0f : 1;
+	/* Each point is touched 4 times by each slope constraint in all 4 cardinal directions */
+	/* Each point is touched by 9 roughness constraints */
+	/* So that's a weight of 1/(4*4+9) = 1/25 for any point */
+	/* Do note: each point needs to have the same weight to preserve the EMD property */
+	float weight = mod->mode == PARALLEL ? 1/25.0f : 1;
 
 	/* Count the number of iterations */
 	unsigned int i = 0;
@@ -252,11 +301,11 @@ int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 		for(ix = 0; ix < size*size; ++ix)
 		{
 			if(inp[ix].flags & SLOPE)
-				done &= relax_slope(size, ix, weight, inp, data);
+				done &= relax_slope(size, ix, scale, weight, inp, data);
 			if(inp[ix].flags & DIR_SLOPE)
-				done &= relax_dir_slope(size, ix, weight, inp, data);
+				done &= relax_dir_slope(size, ix, scale, weight, inp, data);
 			if(inp[ix].flags & ROUGHNESS)
-				done &= relax_roughness(size, ix, weight, inp, data);
+				done &= relax_roughness(size, ix, scale, weight, inp, data);
 		}
 
 		/* Exit if no changes were made */

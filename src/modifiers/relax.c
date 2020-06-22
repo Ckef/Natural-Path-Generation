@@ -17,8 +17,8 @@
 #define SAME_COLUMN(i,j,size) (((i)/size) == ((j)/size))
 
 /*****************************/
-static unsigned int move_slope(
-	float   delta,
+static void move_slope(
+	float   slope,
 	float   scale,
 	Vertex* o1,
 	Vertex* o2,
@@ -27,27 +27,14 @@ static unsigned int move_slope(
 {
 	/* The current slope and the indices */
 	/* a is the lowest point, b the highest */
-	float s = delta / scale;
-	Vertex* b = (s > 0) ? o2 : o1;
-	Vertex* a = (s > 0) ? o1 : o2;
-	s = (s > 0) ? s : -s;
+	Vertex* b = (slope > 0) ? o2 : o1;
+	Vertex* a = (slope > 0) ? o1 : o2;
+	slope = (slope > 0) ? slope : -slope;
 
-	/* Add the convergence threshold to the comparison */
-	/* If we do not, it may never exit due to floating point errors */
-	/* We could calculate the error that could accumulate, but this is hard */
-	/* So we have this hardcoded threshold :) */
-	if(s > maxSlope + S_THRESHOLD)
-	{
-		/* If the slope is too great, move a and b closer to each other */
-		float move = (s - maxSlope) * scale * .5f;
-		a->h += move * weight;
-		b->h -= move * weight;
-
-		/* Modification applied, return 0, indicating we are not done yet */
-		return 0;
-	}
-
-	return 1;
+	/* Move a and b closer to each other until the slope is satisfied */
+	float move = (slope - maxSlope) * scale * (.5f * weight);
+	a->h += move;
+	b->h -= move;
 }
 
 /*****************************/
@@ -63,7 +50,8 @@ static float calc_roughness(
 	for(c = -1; c <= 1; ++c)
 		for(r = -1; r <= 1; ++r)
 		{
-			if(c == 0 && r == 0) continue;
+			if(c == 0 && r == 0)
+				continue;
 
 			/* Check bounds */
 			int ixx = ix + c * (int)size + r;
@@ -116,14 +104,21 @@ static int relax_slope(
 			continue;
 
 		/* This scales gradient vector g by MaxSlope/|g| */
-		float dx = inp[ixx].h - inp[ix].h;
-		float dy = inp[ixy].h - inp[ix].h;
-		float sx = dx / scale;
-		float sy = dy / scale;
-		float G = MAX_SLOPE / sqrtf(sx*sx + sy*sy);
+		float sx = (inp[ixx].h - inp[ix].h) / scale;
+		float sy = (inp[ixy].h - inp[ix].h) / scale;
+		float g = sqrtf(sx*sx + sy*sy);
 
-		done &= move_slope(dx, scale, out + ix, out + ixx, (sx > 0 ? sx : -sx) * G, weight);
-		done &= move_slope(dy, scale, out + ix, out + ixy, (sy > 0 ? sy : -sy) * G, weight);
+		/* And add the oh so familiar convergence threshold to the comparison */
+		/* Again for floating point errors */
+		if(g > MAX_SLOPE + S_THRESHOLD)
+		{
+			g = MAX_SLOPE / g;
+			move_slope(sx, scale, out + ix, out + ixx, (sx > 0 ? sx : -sx) * g, weight);
+			move_slope(sy, scale, out + ix, out + ixy, (sy > 0 ? sy : -sy) * g, weight);
+
+			/* Modification applied, indiciate we are not done yet */
+			done = 0;
+		}
 	}
 
 	return done;
@@ -150,18 +145,19 @@ static int relax_roughness(
 	Vertex*      inp,
 	Vertex*      out)
 {
-	/* Get the factor to correct the current roughness to the desired one */
-	/* Each term is squared, so take the square root of this factor */
-	/* In here we check for the roughness threshold */
+	/* Calculate current roughness and check for the threshold */
+	/* Without this threshold the whole landscape goes mad :( */
 	float R = calc_roughness(size, inp, ix, scale);
 	if(fabs(R - inp[ix].c) <= R_THRESHOLD)
 		return 1;
 
+	/* Get the factor to correct the current roughness to the desired one */
+	/* Each term is squared, so take the square root of this factor */
 	R = sqrtf(inp[ix].c / R);
 
 	/* Smth to store the move values in */
 	float move[9] = {0};
-	float totMove = 0;
+	float dSupp = 0;
 
 	/* Now multiply each term with our factor */
 	int c, r;
@@ -179,19 +175,19 @@ static int relax_roughness(
 
 			/* And calculate how much we want to move the point */
 			/* We do not actually apply it yet */
-			/* We first calculate loss of supplies and add that loss to each point */
-			/* This way we preserve the EMD property */
 			unsigned int im = (c+1)*3+(r+1);
 
 			/* We actually calculate what we want to move as if the point is 1 unit away */
 			/* This so it all is scale invariant */
 			float s = (inp[ixx].h - inp[ix].h) / scale;
 			move[im] = s * R - s;
-			totMove += move[im];
+			dSupp += move[im];
 		}
 
 	/* Now get the total amount we want to move each point and do it */
-	totMove /= 9;
+	/* The total amount of supplies changed is distributed over all points */
+	/* So EMD is preserved :) */
+	dSupp /= 9;
 	for(c = -1; c <= 1; ++c)
 		for(r = -1; r <= 1; ++r)
 		{
@@ -203,7 +199,7 @@ static int relax_roughness(
 				continue;
 
 			/* Obviously apply the weight as well */
-			float m = (move[(c+1)*3+(r+1)] - totMove) * scale;
+			float m = (move[(c+1)*3+(r+1)] - dSupp) * scale;
 			out[ixx].h += m * weight;
 		}
 
@@ -230,9 +226,19 @@ int mod_relax_slope_1d(unsigned int size, Vertex* data, ModData* mod)
 		unsigned int r;
 		for(r = 0; r < size-1; ++r)
 		{
-			/* Use a weight of 1 because this one works sequentially only */
-			float d = mid[r+1].h - mid[r].h;
-			done &= move_slope(d, scale, mid + r, mid + (r+1), MAX_SLOPE, 1);
+			float s = (mid[r+1].h - mid[r].h) / scale;
+
+			/* Add the convergence threshold to the comparison */
+			/* If we do not, it may never exit due to floating point errors */
+			/* We could calculate the error that could accumulate, but this is hard */
+			/* So we have this hardcoded threshold :) */
+			if((s > 0 ? s : -s) > MAX_SLOPE + S_THRESHOLD)
+			{
+				move_slope(s, scale, mid + r, mid + (r+1), MAX_SLOPE, 1);
+
+				/* Modification applied, indiciate we are not done yet */
+				done = 0;
+			}
 		}
 
 		/* Exit if no changes were made */

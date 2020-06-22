@@ -17,9 +17,9 @@ typedef enum
 /* Constraint flags applied to vertices */
 typedef enum
 {
-	F_SLOPE     = 0b0001,
-	F_DIR_SLOPE = 0b0010, /* Directional derivative instead of gradient */
-	F_ROUGHNESS = 0b0100
+	SLOPE     = 0b0001,
+	DIR_SLOPE = 0b0010, /* Directional derivative instead of gradient */
+	ROUGHNESS = 0b0100
 
 } VertexFlag;
 

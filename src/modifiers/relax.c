@@ -54,6 +54,37 @@ static unsigned int move_slope(
 }
 
 /*****************************/
+static float calc_roughness(
+	unsigned int size,
+	Vertex*      data,
+	unsigned int ix)
+{
+	float R2 = 0;
+
+	/* Loop over all neighbors and sum their differences */
+	int c, r;
+	for(c = -1; c <= 1; ++c)
+		for(r = -1; r <= 1; ++r)
+		{
+			int ixx = ix + c * (int)size + r;
+			if((int)ix == ixx) continue;
+
+			/* Check bounds */
+			if(ixx < 0 || (unsigned int)ixx >= size*size)
+				continue;
+			if(!SAME_COLUMN(ix + c * (int)size, ixx, size))
+				continue;
+
+			/* Suuuuuuuuuuuuuuuum */
+			float d = data[ix].h * data[ixx].h;
+			R2 += d*d;
+		}
+
+	/* It's actually roughness squared */
+	return R2;
+}
+
+/*****************************/
 static int relax_slope(
 	unsigned int size,
 	unsigned int ix,
@@ -128,6 +159,9 @@ static int relax_roughness(
 	Vertex*      inp,
 	Vertex*      out)
 {
+	/* So first calculate the current roughness */
+	float R = calc_roughness(size, out, ix);
+
 	return 1;
 }
 
@@ -182,6 +216,15 @@ int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 		}
 	}
 
+	/* Okay so before we begin, calculate the initial roughness values */
+	if(mod->iterations == 0)
+	{
+		unsigned int ix;
+		for(ix = 0; ix < size*size; ++ix)
+			if(data[ix].flags & ROUGHNESS)
+				data[ix].c = calc_roughness(size, data, ix);
+	}
+
 	/* Now define the input buffer */
 	/* For parallelism we use the buffer, otherwise just data */
 	Vertex* inp = mod->mode == PARALLEL ? mod->buffer : data;
@@ -208,11 +251,11 @@ int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 		unsigned int ix;
 		for(ix = 0; ix < size*size; ++ix)
 		{
-			if(inp[ix].flags & F_SLOPE)
+			if(inp[ix].flags & SLOPE)
 				done &= relax_slope(size, ix, weight, inp, data);
-			if(inp[ix].flags & F_DIR_SLOPE)
+			if(inp[ix].flags & DIR_SLOPE)
 				done &= relax_dir_slope(size, ix, weight, inp, data);
-			if(inp[ix].flags & F_ROUGHNESS)
+			if(inp[ix].flags & ROUGHNESS)
 				done &= relax_roughness(size, ix, weight, inp, data);
 		}
 

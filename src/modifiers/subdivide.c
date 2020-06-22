@@ -109,8 +109,7 @@ static void flag_ellipse(
 	Vertex*      data,
 	ANode        center,
 	float        rx,
-	float        ry,
-	int          flags)
+	float        ry)
 {
 	/* Loop over all vertices in its bounding box */
 	/* Yeah we're using signed integers... uum could be bettter? */
@@ -128,7 +127,7 @@ static void flag_ellipse(
 			/* Now check if it's inside our ellipse */
 			float d = (c*(float)c) / (rx*rx) + (r*(float)r) / (ry*ry);
 			if(d <= 1)
-				data[cc * size + rr].flags |= flags;
+				data[cc * size + rr].flags = SLOPE;
 		}
 }
 
@@ -192,12 +191,12 @@ static int find_path(
 			/* Flag the path from start to goal */
 			while(!EQUAL(u, start))
 			{
-				flag_ellipse(size, data, u, PATH_RADIUS, PATH_RADIUS, F_SLOPE);
+				flag_ellipse(size, data, u, PATH_RADIUS, PATH_RADIUS);
 				u = PREV(u);
 			}
 
 			/* Don't forget to color the start */
-			flag_ellipse(size, data, start, PATH_RADIUS, PATH_RADIUS, F_SLOPE);
+			flag_ellipse(size, data, start, PATH_RADIUS, PATH_RADIUS);
 
 			free(Q.data);
 			free(AND);
@@ -268,6 +267,11 @@ static int find_path(
 /*****************************/
 int mod_subdivide(unsigned int size, Vertex* data, ModData* mod)
 {
+	/* Roughness everywhere! */
+	unsigned int i;
+	for(i = 0; i < size*size; ++i)
+		data[i].flags = ROUGHNESS;
+
 	/* Find a path from the lower left corner to the upper right corner */
 	ANode s = { .c = 0,      .r = 0      };
 	ANode g = { .c = size-1, .r = size-1 };

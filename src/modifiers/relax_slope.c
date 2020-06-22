@@ -8,8 +8,26 @@
 
 /* Hardcoded slope constraint for now */
 #define MAX_SLOPE       0.0025f
+#define CONV_THRESHOLD  0.00001f /* Convergence threshold of slope error */
 #define MAX_ITERATIONS  10000
 #define STEP_SIZE       10
+
+/* Get if a point is a corner or edge, given an index and the scale of the terrain */
+#define IS_CORNER(i,size) (i==0||i==size-1||i==size*size-1||i==(size-1)*size)
+#define IS_EDGE(i,size)   (i<size||i>(size-1)*size||i%size==0||(i+1)%size==0)
+
+/* Check if two indices are on the same column */
+#define SAME_COLUMN(i,j,size) ((i/size) == (j/size))
+
+/* Get the weight of a point */
+/* Each point is touched 4 times by each of the 4 cardinal directions */
+/* So that's a weight of 1/(4*4) = 1/16 for any point */
+/* Except for edges and corners, corners get 1/4 and edges get 1/8 */
+#define W(mode,i,size) ( \
+	mode==SEQUENTIAL ? 1 : \
+	IS_CORNER(i,size) ? 1/4.0f : \
+	IS_EDGE(i,size) ? 1/8.0f : \
+	1/16.0f)
 
 /*****************************/
 static unsigned int move_slope(
@@ -18,26 +36,29 @@ static unsigned int move_slope(
 	Vertex* o1,
 	Vertex* o2,
 	float   maxSlope,
-	float   weight)
+	float   w1,
+	float   w2)
 {
-	/* The current slope and the indices */
+	/* The current slope and the indices + weights */
 	/* a is the lowest vertex, b the highest */
 	float s = delta / scale;
 	Vertex* b = (s > 0) ? o2 : o1;
 	Vertex* a = (s > 0) ? o1 : o2;
+	float bw = (s > 0) ? w2 : w1;
+	float aw = (s > 0) ? w1 : w2;
 	s = (s > 0) ? s : -s;
 
-	/* Add epsilon to the comparison, otherwise it never exits */
-	/* Note: 2 * 1/weight times epsilon, cause we divide the difference by this number */
-	/* Note: this is probably way inaccurate */
-	/* TODO: find some accurate way to account for floating point errors */
-	if(s > maxSlope + FLT_EPSILON / (.5f * weight))
+	/* Add the convergence threshold to the comparison */
+	/* If we do not, it may never exit due to floating point errors */
+	/* We could calculate the error that could accumulate, but this is hard */
+	/* So we have this hardcoded threshold :) */
+	if(s > maxSlope + CONV_THRESHOLD)
 	{
 		/* If the slope is too great, move a and b closer to each other */
-		/* The weight is so all vertex pairs can be done in parallel */
-		float move = (s - maxSlope) * scale * (.5f * weight);
-		a->h += move;
-		b->h -= move;
+		/* The weights w1 and w2 are so all vertex pairs can be done in parallel */
+		float move = (s - maxSlope) * scale * .5f;
+		a->h += move * aw;
+		b->h -= move * bw;
 
 		/* Modification applied, return 0, indicating we are not done yet */
 		return 0;
@@ -67,7 +88,7 @@ int mod_relax_slope_1d(unsigned int size, Vertex* data, ModData* mod)
 		{
 			/* Use a weight of 1 because this one works sequentially only */
 			float d = mid[r+1].h - mid[r].h;
-			done &= move_slope(d, scale, mid + r, mid + (r+1), MAX_SLOPE, 1);
+			done &= move_slope(d, scale, mid + r, mid + (r+1), MAX_SLOPE, 1, 1);
 		}
 
 		/* Exit if no changes were made */
@@ -101,10 +122,7 @@ int mod_relax_slope(unsigned int size, Vertex* data, ModData* mod)
 
 	/* Now define the input buffer */
 	/* For parallelism we use the buffer, otherwise just data */
-	/* Also define a weight as 1/(4*4) */
-	/* Each point is touched 4 times by each of the 4 cardinal directions */
 	Vertex* inp = mod->mode == PARALLEL ? mod->buffer : data;
-	float w = mod->mode == PARALLEL ? .0625f : 1;
 
 	/* Count the number of iterations */
 	unsigned int i = 0;
@@ -140,9 +158,17 @@ int mod_relax_slope(unsigned int size, Vertex* data, ModData* mod)
 					((d == 0) ? 1 : (d == 1) ? (int)size : (d == 2) ? -1 : -(int)size);
 
 				/* Check bounds */
-				/* TODO: Exactly at the boundaries, the weight should actually be a bit lower */
-				if(ixx < 0 || ixx >= (int)(size*size) || ixy < 0 || ixy >= (int)(size*size))
+				if(ixx < 0 || (unsigned int)ixx >= size*size)
 					continue;
+				if(ixy < 0 || (unsigned int)ixy >= size*size)
+					continue;
+				if(!SAME_COLUMN(ix, (unsigned int)((d==0||d==2) ? ixy : ixx), size))
+					continue;
+
+				/* Now define the weights for each affected point */
+				float wx = W(mod->mode, (unsigned int)ix, size);
+				float wxx = W(mod->mode, (unsigned int)ixx, size);
+				float wxy = W(mod->mode, (unsigned int)ixy, size);
 
 				/* This scales gradient vector g by MaxSlope/|g| */
 				float dx = inp[ixx].h - inp[ix].h;
@@ -151,8 +177,8 @@ int mod_relax_slope(unsigned int size, Vertex* data, ModData* mod)
 				float sy = dy / scale;
 				float g = MAX_SLOPE / sqrtf(sx*sx + sy*sy);
 
-				done &= move_slope(dx, scale, data + ix, data + ixx, (sx > 0 ? sx : -sx) * g, w);
-				done &= move_slope(dy, scale, data + ix, data + ixy, (sy > 0 ? sy : -sy) * g, w);
+				done &= move_slope(dx, scale, data + ix, data + ixx, (sx > 0 ? sx : -sx) * g, wx, wxx);
+				done &= move_slope(dy, scale, data + ix, data + ixy, (sy > 0 ? sy : -sy) * g, wx, wxy);
 
 				/* This applies different scales to the delta x and delta y */
 				/* It retains the ratio of the two directional delta's squared */
@@ -160,8 +186,8 @@ int mod_relax_slope(unsigned int size, Vertex* data, ModData* mod)
 				float a = sqrtf(sx*sx / (sx*sx + sy*sy)) * MAX_SLOPE;
 				float b = sqrtf(sy*sy / (sx*sx + sy*sy)) * MAX_SLOPE;
 
-				done &= move_slope(dx, scale, data + ix, data + ixx, a, w);
-				done &= move_slope(dy, scale, data + ix, data + ixy, b, w);
+				done &= move_slope(dx, scale, data + ix, data + ixx, a, wx, wxx);
+				done &= move_slope(dy, scale, data + ix, data + ixy, b, wx, wxy);
 				*/
 			}
 		}

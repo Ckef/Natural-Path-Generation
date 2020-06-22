@@ -4,6 +4,9 @@
 #include "scene.h"
 #include <math.h>
 
+/* Check if two indices are on the same column */
+#define SAME_COLUMN(i,j,size) ((i/size) == (j/size))
+
 /*****************************/
 static float max_slope_1d(unsigned int size, Vertex* data, int flags)
 {
@@ -66,7 +69,11 @@ static float max_slope(unsigned int size, Vertex* data, int flags)
 				((d == 0) ? 1 : (d == 1) ? (int)size : (d == 2) ? -1 : -(int)size);
 
 			/* Check bounds */
-			if(ixx < 0 || ixx >= (int)(size*size) || ixy < 0 || ixy >= (int)(size*size))
+			if(ixx < 0 || (unsigned int)ixx >= size*size)
+				continue;
+			if(ixy < 0 || (unsigned int)ixy >= size*size)
+				continue;
+			if(!SAME_COLUMN(ix, (unsigned int)((d==0||d==2) ? ixy : ixx), size))
 				continue;
 
 			/* Get the gradient */

@@ -19,19 +19,6 @@
 /* Check if two indices are on the same column */
 #define SAME_COLUMN(i,j,size) ((i/size) == (j/size))
 
-/* Note: oops this is deprecated! */
-/* Each weight needs to be the same in order to preserve the EMD property */
-/* ... */
-/* Get the weight of a point */
-/* Each point is touched 4 times by each of the 4 cardinal directions */
-/* So that's a weight of 1/(4*4) = 1/16 for any point */
-/* Except for edges and corners, corners get 1/4 and edges get 1/8 */
-#define W(mode,i,size) ( \
-	mode==SEQUENTIAL ? 1 : \
-	IS_CORNER(i,size) ? 1/4.0f : \
-	IS_EDGE(i,size) ? 1/8.0f : \
-	1/16.0f)
-
 /*****************************/
 static unsigned int move_slope(
 	float   delta,
@@ -63,6 +50,84 @@ static unsigned int move_slope(
 		return 0;
 	}
 
+	return 1;
+}
+
+/*****************************/
+static int relax_slope(
+	unsigned int size,
+	unsigned int ix,
+	float        weight,
+	Vertex*      inp,
+	Vertex*      out)
+{
+	int done = 1;
+	float scale = GET_SCALE(size);
+
+	/* Loop over all 4 cardinal directions */
+	unsigned int d;
+	for(d = 0; d < 4; ++d)
+	{
+		/* Get the vertex in question and its two neighbours */
+		/* This loops over all 4 cardinal directions */
+		/* Rotating the neighbours clockwise around their center */
+		/* Yes they're signed integers... */
+		int ixx = ix +
+			((d == 0) ? (int)size : (d == 1) ? -1 : (d == 2) ? -(int)size : 1);
+		int ixy = ix +
+			((d == 0) ? 1 : (d == 1) ? (int)size : (d == 2) ? -1 : -(int)size);
+
+		/* Check bounds */
+		if(ixx < 0 || (unsigned int)ixx >= size*size)
+			continue;
+		if(ixy < 0 || (unsigned int)ixy >= size*size)
+			continue;
+		if(!SAME_COLUMN(ix, (unsigned int)((d==0||d==2) ? ixy : ixx), size))
+			continue;
+
+		/* This scales gradient vector g by MaxSlope/|g| */
+		float dx = inp[ixx].h - inp[ix].h;
+		float dy = inp[ixy].h - inp[ix].h;
+		float sx = dx / scale;
+		float sy = dy / scale;
+		float g = MAX_SLOPE / sqrtf(sx*sx + sy*sy);
+
+		done &= move_slope(dx, scale, out + ix, out + ixx, (sx > 0 ? sx : -sx) * g, weight);
+		done &= move_slope(dy, scale, out + ix, out + ixy, (sy > 0 ? sy : -sy) * g, weight);
+
+		/* This applies different scales to the delta x and delta y */
+		/* It retains the ratio of the two directional delta's squared */
+		/*
+		float a = sqrtf(sx*sx / (sx*sx + sy*sy)) * MAX_SLOPE;
+		float b = sqrtf(sy*sy / (sx*sx + sy*sy)) * MAX_SLOPE;
+
+		done &= move_slope(dx, scale, out + ix, out + ixx, a, weight);
+		done &= move_slope(dy, scale, out + ix, out + ixy, b, weight);
+		*/
+	}
+
+	return done;
+}
+
+/*****************************/
+static int relax_dir_slope(
+	unsigned int size,
+	unsigned int ix,
+	float        weight,
+	Vertex*      inp,
+	Vertex*      out)
+{
+	return 1;
+}
+
+/*****************************/
+static int relax_roughness(
+	unsigned int size,
+	unsigned int ix,
+	float        weight,
+	Vertex*      inp,
+	Vertex*      out)
+{
 	return 1;
 }
 
@@ -102,10 +167,8 @@ int mod_relax_slope_1d(unsigned int size, Vertex* data, ModData* mod)
 }
 
 /*****************************/
-int mod_relax_slope(unsigned int size, Vertex* data, ModData* mod)
+int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 {
-	float scale = GET_SCALE(size);
-
 	/* Allocate a buffer for input if it wasn't there yet */
 	/* We just leave it empty if no parallelism allowed */
 	size_t buffSize = sizeof(Vertex) * size * size;
@@ -126,7 +189,8 @@ int mod_relax_slope(unsigned int size, Vertex* data, ModData* mod)
 	/* And also define a weight */
 	/* Each point is touched 4 times by each of the 4 cardinal directions */
 	/* So that's a weight of 1/(4*4) = 1/16 for any point */
-	float w = mod->mode == PARALLEL ? 1/16.0f : 1;
+	/* Do note: each vertex needs to have the same weight to preserve the EMD property */
+	float weight = mod->mode == PARALLEL ? 1/16.0f : 1;
 
 	/* Count the number of iterations */
 	unsigned int i = 0;
@@ -140,63 +204,16 @@ int mod_relax_slope(unsigned int size, Vertex* data, ModData* mod)
 		if(mod->mode == PARALLEL)
 			memcpy(mod->buffer, data, buffSize);
 
-		/* Loop over all vertices */
+		/* Loop over all vertices and apply the relevant constraints */
 		unsigned int ix;
 		for(ix = 0; ix < size*size; ++ix)
 		{
-			/* Check if the gradient constraint applies */
-			if(!(inp[ix].flags & F_SLOPE))
-				continue;
-
-			/* Loop over all 4 cardinal directions */
-			unsigned int d;
-			for(d = 0; d < 4; ++d)
-			{
-				/* Get the vertex in question and its two neighbours */
-				/* This loops over all 4 cardinal directions */
-				/* Rotating the neighbours clockwise around their center */
-				/* Yes they're signed integers... */
-				int ixx = ix +
-					((d == 0) ? (int)size : (d == 1) ? -1 : (d == 2) ? -(int)size : 1);
-				int ixy = ix +
-					((d == 0) ? 1 : (d == 1) ? (int)size : (d == 2) ? -1 : -(int)size);
-
-				/* Check bounds */
-				if(ixx < 0 || (unsigned int)ixx >= size*size)
-					continue;
-				if(ixy < 0 || (unsigned int)ixy >= size*size)
-					continue;
-				if(!SAME_COLUMN(ix, (unsigned int)((d==0||d==2) ? ixy : ixx), size))
-					continue;
-
-				/* Note: oops this is deprecated! */
-				/* Now define the weights for each affected point */
-				/*
-				float wx = W(mod->mode, (unsigned int)ix, size);
-				float wxx = W(mod->mode, (unsigned int)ixx, size);
-				float wxy = W(mod->mode, (unsigned int)ixy, size);
-				*/
-
-				/* This scales gradient vector g by MaxSlope/|g| */
-				float dx = inp[ixx].h - inp[ix].h;
-				float dy = inp[ixy].h - inp[ix].h;
-				float sx = dx / scale;
-				float sy = dy / scale;
-				float g = MAX_SLOPE / sqrtf(sx*sx + sy*sy);
-
-				done &= move_slope(dx, scale, data + ix, data + ixx, (sx > 0 ? sx : -sx) * g, w);
-				done &= move_slope(dy, scale, data + ix, data + ixy, (sy > 0 ? sy : -sy) * g, w);
-
-				/* This applies different scales to the delta x and delta y */
-				/* It retains the ratio of the two directional delta's squared */
-				/*
-				float a = sqrtf(sx*sx / (sx*sx + sy*sy)) * MAX_SLOPE;
-				float b = sqrtf(sy*sy / (sx*sx + sy*sy)) * MAX_SLOPE;
-
-				done &= move_slope(dx, scale, data + ix, data + ixx, a, w);
-				done &= move_slope(dy, scale, data + ix, data + ixy, b, w);
-				*/
-			}
+			if(inp[ix].flags & F_SLOPE)
+				done &= relax_slope(size, ix, weight, inp, data);
+			if(inp[ix].flags & F_DIR_SLOPE)
+				done &= relax_dir_slope(size, ix, weight, inp, data);
+			if(inp[ix].flags & F_ROUGHNESS)
+				done &= relax_roughness(size, ix, weight, inp, data);
 		}
 
 		/* Exit if no changes were made */

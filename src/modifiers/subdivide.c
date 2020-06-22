@@ -189,16 +189,15 @@ static int find_path(
 		/* If we've reached the goal, hurray! */
 		if(EQUAL(u, goal))
 		{
-			/* Color the path from start to goal */
-			/* i.e. add 1 to their flags */
+			/* Flag the path from start to goal */
 			while(!EQUAL(u, start))
 			{
-				flag_ellipse(size, data, u, PATH_RADIUS, PATH_RADIUS, 1);
+				flag_ellipse(size, data, u, PATH_RADIUS, PATH_RADIUS, F_SLOPE);
 				u = PREV(u);
 			}
 
 			/* Don't forget to color the start */
-			flag_ellipse(size, data, start, PATH_RADIUS, PATH_RADIUS, 1);
+			flag_ellipse(size, data, start, PATH_RADIUS, PATH_RADIUS, F_SLOPE);
 
 			free(Q.data);
 			free(AND);

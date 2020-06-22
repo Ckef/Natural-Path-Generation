@@ -145,7 +145,7 @@ int mod_relax_slope(unsigned int size, Vertex* data, ModData* mod)
 		for(ix = 0; ix < size*size; ++ix)
 		{
 			/* Check if the gradient constraint applies */
-			if(!(inp[ix].flags & 1))
+			if(!(inp[ix].flags & F_SLOPE))
 				continue;
 
 			/* Loop over all 4 cardinal directions */

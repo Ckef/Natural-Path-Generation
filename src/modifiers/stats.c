@@ -108,8 +108,8 @@ int mod_stats(unsigned int size, Vertex* data, ModData* mod)
 {
 	output("");
 	output("-- Terrain Stats --");
-	output("-- max slope 1D:   %f", max_slope_1d(size, data, 1));
-	output("-- max slope 2D:   %f", max_slope(size, data, 1));
+	output("-- max slope 1D:   %f", max_slope_1d(size, data, F_SLOPE));
+	output("-- max slope 2D:   %f", max_slope(size, data, F_SLOPE));
 	output("-- total supplies: %f", total_supplies(size, data));
 	output("");
 

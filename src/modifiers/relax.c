@@ -29,10 +29,9 @@ static void move_slope(
 	/* a is the lowest point, b the highest */
 	Vertex* b = (slope > 0) ? o2 : o1;
 	Vertex* a = (slope > 0) ? o1 : o2;
-	slope = (slope > 0) ? slope : -slope;
 
 	/* Move a and b closer to each other until the slope is satisfied */
-	float move = (slope - maxSlope) * scale * (.5f * weight);
+	float move = (fabs(slope) - maxSlope) * scale * (.5f * weight);
 	a->h += move;
 	b->h -= move;
 }
@@ -106,15 +105,15 @@ static int relax_slope(
 		/* This scales gradient vector g by MaxSlope/|g| */
 		float sx = (inp[ixx].h - inp[ix].h) / scale;
 		float sy = (inp[ixy].h - inp[ix].h) / scale;
-		float g = sqrtf(sx*sx + sy*sy);
+		float g = hypotf(sx, sy);
 
 		/* And add the oh so familiar convergence threshold to the comparison */
 		/* Again for floating point errors */
 		if(g > MAX_SLOPE + S_THRESHOLD)
 		{
 			g = MAX_SLOPE / g;
-			move_slope(sx, scale, out + ix, out + ixx, (sx > 0 ? sx : -sx) * g, weight);
-			move_slope(sy, scale, out + ix, out + ixy, (sy > 0 ? sy : -sy) * g, weight);
+			move_slope(sx, scale, out + ix, out + ixx, fabs(sx) * g, weight);
+			move_slope(sy, scale, out + ix, out + ixy, fabs(sy) * g, weight);
 
 			/* Modification applied, indiciate we are not done yet */
 			done = 0;
@@ -232,7 +231,7 @@ int mod_relax_slope_1d(unsigned int size, Vertex* data, ModData* mod)
 			/* If we do not, it may never exit due to floating point errors */
 			/* We could calculate the error that could accumulate, but this is hard */
 			/* So we have this hardcoded threshold :) */
-			if((s > 0 ? s : -s) > MAX_SLOPE + S_THRESHOLD)
+			if(fabs(s) > MAX_SLOPE + S_THRESHOLD)
 			{
 				move_slope(s, scale, mid + r, mid + (r+1), MAX_SLOPE, 1);
 

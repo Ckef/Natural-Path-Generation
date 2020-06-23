@@ -16,16 +16,16 @@
 
 /* Some macros to make A* a bit easier */
 /* Firstly accessing data of a node */
-#define I(n)     (n.c * size + n.r) /* Index of a node into data */
-#define PREV(n)  AND[I(n)].prev     /* The node from which we got to a node */
-#define COST(n)  AND[I(n)].cost     /* Cost of the path to a node */
-#define SCORE(n) AND[I(n)].score    /* Score of a node */
+#define I(n)     ((n).c * size + (n).r) /* Index of a node into data */
+#define PREV(n)  AND[I(n)].prev         /* The node from which we got to a node */
+#define COST(n)  AND[I(n)].cost         /* Cost of the path to a node */
+#define SCORE(n) AND[I(n)].score        /* Score of a node */
 
 /* Compare two nodes */
-#define EQUAL(a,b) (a.c == b.c && a.r == b.r)
+#define EQUAL(a,b) ((a).c == (b).c && (a).r == (b).r)
 
-/* The L2 distance (i.e. Euclidean ground distance) from one node to another */
-#define D(a,b) sqrtf(((int)a.c-(int)b.c)*((int)a.c-(int)b.c) + ((int)a.r-(int)b.r)*((int)a.r-(int)b.r))
+/* The L2 distance (i.e. Euclidean ground distance) between two nodes */
+#define D(a,b) hypotf((int)(a).c-(int)(b).c, (int)(a).r-(int)(b).r)
 
 /* A* node */
 typedef struct
@@ -54,6 +54,97 @@ typedef struct
 
 } AHeap;
 
+
+/*****************************/
+static float find_ellipse_dist(float a, float b, float px, float py)
+{
+	/* Implementation to get the distance between an ellipse and a point */
+	/* It actually finds the closest point on the ellipse's boundary */
+	/* I have no idea how it works, call it black magick */
+	/* Blog post: */
+	/*   https://wet-robots.ghost.io/simple-method-for-distance-to-ellipse/ */
+	/* Stackoverflow (for optimizations): */
+	/*   https://stackoverflow.com/a/46007540 */
+
+	float tx = .707f;
+	float ty = .707f;
+
+	unsigned int i;
+	for(i = 0; i < 3; ++i)
+	{
+		float ex = (a*a - b*b) * powf(tx, 3) / a;
+		float ey = (b*b - a*a) * powf(ty, 3) / b;
+		float rx = (a * tx) - ex;
+		float ry = (b * ty) - ey;
+		float qx = fabs(px) - ex;
+		float qy = fabs(py) - ey;
+		float r = hypotf(rx, ry);
+		float q = hypotf(qx, qy);
+
+		tx = fminf(1, fmaxf(0, (qx * r / q + ex) / a));
+		ty = fminf(1, fmaxf(0, (qy * r / q + ey) / b));
+		float t = hypotf(tx, ty);
+		tx /= t;
+		ty /= t;
+	}
+
+	tx = copysignf(a * tx, px);
+	ty = copysignf(b * ty, py);
+
+	return hypotf(px - tx, py - ty);
+}
+
+/*****************************/
+static void flag_ellipse(
+	unsigned int size,
+	Vertex*      data,
+	ANode        center,
+	float        rx,
+	float        ry,
+	float        border)
+{
+	/* Extend the ellipse with an influence border */
+	float rx2 = rx + border;
+	float ry2 = ry + border;
+
+	/* Loop over all vertices in its bounding box */
+	/* Yeah we're using signed integers... uum could be bettter? */
+	int c, r;
+	for(c = (int)(-rx2); c <= (int)rx2; ++c)
+		for(r = (int)(-ry2); r <= (int)ry2; ++r)
+		{
+			int cc = (int)center.c + c;
+			int rr = (int)center.r + r;
+			unsigned int i = cc * size + rr;
+
+			/* Check bounds + check if a slope constraint was already assigned */
+			if(cc < 0 || cc >= (int)size || rr < 0 || rr >= (int)size)
+				continue;
+			if(data[i].flags & SLOPE)
+				continue;
+
+			/* Now check if it's inside our first ellipse */
+			float d = (c*(float)c) / (rx*rx) + (r*(float)r) / (ry*ry);
+			if(d <= 1)
+				data[i].flags = SLOPE;
+			else
+			{
+				/* If not, it might be in our second ellipse */
+				d = (c*(float)c) / (rx2*rx2) + (r*(float)r) / (ry2*ry2);
+				if(d <= 1)
+				{
+					/* Also calculate the distance to the first ellipse */
+					/* Normalize it to [0,1] */
+					/* To use for a linear falloff of the gradient constraint */
+					d = find_ellipse_dist(rx, ry, c, r) / border;
+					if(!(data[i].flags & ROUGHNESS) || d < data[i].c)
+						data[i].c = d;
+
+					data[i].flags = ROUGHNESS;
+				}
+			}
+		}
+}
 
 /*****************************/
 static void heapify_up(
@@ -104,48 +195,6 @@ static void heapify_down(
 		/* And heapify the child i's at now */
 		heapify_down(heap, s, size, AND);
 	}
-}
-
-/*****************************/
-static void flag_ellipse(
-	unsigned int size,
-	Vertex*      data,
-	ANode        center,
-	float        rx,
-	float        ry,
-	float        border)
-{
-	/* Extend the ellipse with an influence border */
-	float rx2 = rx + border;
-	float ry2 = ry + border;
-
-	/* Loop over all vertices in its bounding box */
-	/* Yeah we're using signed integers... uum could be bettter? */
-	int c, r;
-	for(c = (int)(-rx2); c <= (int)rx2; ++c)
-		for(r = (int)(-ry2); r <= (int)ry2; ++r)
-		{
-			int cc = (int)center.c + c;
-			int rr = (int)center.r + r;
-
-			/* Check bounds + check if a slope constraint was already assigned */
-			if(cc < 0 || cc >= (int)size || rr < 0 || rr >= (int)size)
-				continue;
-			if(data[cc * size + rr].flags & SLOPE)
-				continue;
-
-			/* Now check if it's inside our first ellipse */
-			float d = (c*(float)c) / (rx*rx) + (r*(float)r) / (ry*ry);
-			if(d <= 1)
-				data[cc * size + rr].flags = SLOPE;
-			else
-			{
-				/* If not, it might be in our second ellipse */
-				d = (c*(float)c) / (rx2*rx2) + (r*(float)r) / (ry2*ry2);
-				if(d <= 1)
-					data[cc * size + rr].flags = ROUGHNESS;
-			}
-		}
 }
 
 /*****************************/

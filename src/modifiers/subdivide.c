@@ -60,10 +60,15 @@ typedef struct
 
 
 /*****************************/
-static float find_ellipse_dist(float a, float b, float px, float py)
+static void find_ellipse_intersect(
+	float  a,
+	float  b,
+	float  px,
+	float  py,
+	float* ox,
+	float* oy)
 {
-	/* Implementation to get the distance between an ellipse and a point */
-	/* It actually finds the closest point on the ellipse's boundary */
+	/* Implementation to get the closest point on an ellipse from another point */
 	/* I have no idea how it works, call it black magick */
 	/* Blog post: */
 	/*   https://wet-robots.ghost.io/simple-method-for-distance-to-ellipse/ */
@@ -92,10 +97,8 @@ static float find_ellipse_dist(float a, float b, float px, float py)
 		ty /= t;
 	}
 
-	tx = copysignf(a * tx, px);
-	ty = copysignf(b * ty, py);
-
-	return hypotf(px - tx, py - ty);
+	*ox = copysignf(a * tx, px);
+	*oy = copysignf(b * ty, py);
 }
 
 /*****************************/
@@ -138,12 +141,26 @@ static void flag_ellipse(
 				d = (c*(float)c) / (rx2*rx2) + (r*(float)r) / (ry2*ry2);
 				if(d <= 1)
 				{
-					/* Also calculate the distance to the first ellipse */
+					/* Calculate the vector to the first ellipse */
+					float tx, ty;
+					find_ellipse_intersect(rx, ry, c, r, &tx, &ty);
+
 					/* Normalize it to [0,1] */
-					/* To use as linear falloff of the DIR_SLOPE constraint */
-					d = find_ellipse_dist(rx, ry, c, r) / border;
-					if(!(data[i].flags & DIR_SLOPE) || d < data[i].c)
-						data[i].c = d;
+					tx = (c - tx) / border;
+					ty = (r - ty) / border;
+
+					/* If the distance is smaller than what is already stored, replace */
+					/* This so we have the smallest distance to the path */
+					float dNew = tx*tx + ty*ty;
+					float dCur =
+						data[i].c[0]*data[i].c[0] +
+						data[i].c[1]*data[i].c[1];
+
+					if(!(data[i].flags & DIR_SLOPE) || dNew < dCur)
+					{
+						data[i].c[0] = tx;
+						data[i].c[1] = ty;
+					}
 
 					data[i].flags = DIR_SLOPE;
 				}
@@ -301,11 +318,10 @@ static int find_path(
 				/* distance + slope cost * distance */
 				/* Where the slope cost has a power and linear component */
 				float dist = D(u,v) * scale;
-				float slope =
+				float slope = fabs(
 					(data[v.c * size + v.r].h -
-					data[u.c * size + u.r].h) / dist;
+					data[u.c * size + u.r].h) / dist);
 
-				slope = slope > 0 ? slope : -slope;
 				float alt = COST(u) + dist * (1 + powf(slope, COST_POW) * COST_LIN);
 
 				/* If the alternative cost is smaller, set new path */

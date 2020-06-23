@@ -28,8 +28,8 @@ typedef enum
 typedef struct
 {
 	float h;
-	float c;   /* Constraint value */
-	int flags; /* See type VertexFlag */
+	float c[2]; /* Constraint values */
+	int flags;  /* See type VertexFlag */
 
 } Vertex;
 

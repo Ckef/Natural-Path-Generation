@@ -7,7 +7,7 @@
 #include <string.h>
 
 /* Hardcoded slope constraint for now */
-/* The falloff is the number added to the maximum slope at maximum falloff beyond path boundaries */
+/* The falloff is the increase in the max slope the farthest from the path boundary */
 #define MAX_SLOPE          0.0025f
 #define MAX_SLOPE_FALLOFF  0.05f
 #define S_THRESHOLD        0.00001f /* Convergence threshold of slope error */
@@ -124,28 +124,29 @@ static int relax_dir_slope(
 	for(d = 0; d < 4; ++d)
 	{
 		/* Get the point in question and its two neighbours */
-		/* It basically rotates the neighbours clockwise around their center */
 		int ixx, ixy;
 		if(!get_neighbours(size, ix, d, &ixx, &ixy))
 			continue;
 
-		/* This scales gradient vector g by MaxSlope/|g| */
+		/* First consider the falloff for the maximum slope */
+		/* The linear falloff is scaled by dist^0.5 */
+		/* So it's not really linear anymore, otherwise it looks stupid... */
+		float fall = hypotf(inp[ix].c[0], inp[ix].c[1]);
+		float maxSlope = MAX_SLOPE + MAX_SLOPE_FALLOFF * powf(fall, .5f);
+
+		/* This scales directional derivative d by MaxSlope/d */
+		float dx = inp[ix].c[0] / fall;
+		float dy = inp[ix].c[1] / fall;
 		float sx = (inp[ixx].h - inp[ix].h) / scale;
 		float sy = (inp[ixy].h - inp[ix].h) / scale;
-		float g = hypotf(sx, sy);
+		float d = fabs(sx * dx + sy * dy);
 
-		/* Get maximum slope, add the falloff */
-		/* Okay so actually we scale it by dist^0.5 */
-		/* So it's not a linear falloff, otherwise it looks stupid... */
-		float s = MAX_SLOPE + MAX_SLOPE_FALLOFF * powf(inp[ix].c, .5f);
-
-		/* And add the oh so familiar convergence threshold to the comparison */
-		/* Again for floating point errors */
-		if(g > s + S_THRESHOLD)
+		/* The familiar convergence threshold */
+		if(d > maxSlope + S_THRESHOLD)
 		{
-			g = s / g;
-			move_slope(sx, scale, out + ix, out + ixx, fabs(sx) * g, weight);
-			move_slope(sy, scale, out + ix, out + ixy, fabs(sy) * g, weight);
+			d = maxSlope / d;
+			move_slope(sx, scale, out + ix, out + ixx, fabs(sx) * d, weight);
+			move_slope(sy, scale, out + ix, out + ixy, fabs(sy) * d, weight);
 
 			/* Modification applied, indiciate we are not done yet */
 			done = 0;
@@ -201,12 +202,12 @@ static int relax_roughness(
 	/* Calculate current roughness and check for the threshold */
 	/* Without this threshold the whole landscape goes mad :( */
 	float R = calc_roughness(size, inp, ix, scale);
-	if(fabs(R - inp[ix].c) <= R_THRESHOLD)
+	if(fabs(R - inp[ix].c[0]) <= R_THRESHOLD)
 		return 1;
 
 	/* Get the factor to correct the current roughness to the desired one */
 	/* Each term is squared, so take the square root of this factor */
-	R = sqrtf(inp[ix].c / R);
+	R = sqrtf(inp[ix].c[0] / R);
 
 	/* Smth to store the move values in */
 	float move[9] = {0};
@@ -330,7 +331,7 @@ int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 		unsigned int ix;
 		for(ix = 0; ix < size*size; ++ix)
 			if(data[ix].flags & ROUGHNESS)
-				data[ix].c = calc_roughness(size, data, ix, scale);
+				data[ix].c[0] = calc_roughness(size, data, ix, scale);
 	}
 
 	/* Now define the input buffer */

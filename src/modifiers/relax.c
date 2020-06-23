@@ -7,11 +7,13 @@
 #include <string.h>
 
 /* Hardcoded slope constraint for now */
-#define MAX_SLOPE       0.0025f
-#define S_THRESHOLD     0.00001f /* Convergence threshold of slope error */
-#define R_THRESHOLD     0.005f /* Convergence threshold of roughness error */
-#define MAX_ITERATIONS  10000
-#define STEP_SIZE       10
+/* The falloff is the number added to the maximum slope at maximum falloff beyond path boundaries */
+#define MAX_SLOPE          0.0025f
+#define MAX_SLOPE_FALLOFF  0.05f
+#define S_THRESHOLD        0.00001f /* Convergence threshold of slope error */
+#define R_THRESHOLD        0.005f /* Convergence threshold of roughness error */
+#define MAX_ITERATIONS     10000
+#define STEP_SIZE          10
 
 /* Check if two indices are on the same column */
 #define SAME_COLUMN(i,j,size) (((i)/size) == ((j)/size))
@@ -34,6 +36,123 @@ static void move_slope(
 	float move = (fabs(slope) - maxSlope) * scale * (.5f * weight);
 	a->h += move;
 	b->h -= move;
+}
+
+/*****************************/
+static int get_neighbours(
+	unsigned int size,
+	unsigned int ix,
+	unsigned int dir,
+	int*         ixx,
+	int*         ixy)
+{
+	/* Get the point its two neighbours */
+	/* This depends on the cardinal direction given by dir */
+	/* dir is in { 0, 1, 2, 3 } */
+	*ixx = ix +
+		((dir==0) ? (int)size : (dir==1) ? -1 : (dir==2) ? -(int)size : 1);
+	*ixy = ix +
+		((dir==0) ? 1 : (dir==1) ? (int)size : (dir==2) ? -1 : -(int)size);
+
+	/* Check bounds */
+	if(*ixx < 0 || (unsigned int)*ixx >= size*size)
+		return 0;
+	if(*ixy < 0 || (unsigned int)*ixy >= size*size)
+		return 0;
+	if(!SAME_COLUMN(ix, (unsigned int)((dir==0||dir==2) ? *ixy : *ixx), size))
+		return 0;
+
+	/* Return non-zero if all neighbours exist */
+	return 1;
+}
+
+/*****************************/
+static int relax_slope(
+	unsigned int size,
+	unsigned int ix,
+	float        scale,
+	float        weight,
+	Vertex*      inp,
+	Vertex*      out)
+{
+	int done = 1;
+
+	/* Loop over all 4 cardinal directions */
+	unsigned int d;
+	for(d = 0; d < 4; ++d)
+	{
+		/* Get the point in question and its two neighbours */
+		/* It basically rotates the neighbours clockwise around their center */
+		int ixx, ixy;
+		if(!get_neighbours(size, ix, d, &ixx, &ixy))
+			continue;
+
+		/* This scales gradient vector g by MaxSlope/|g| */
+		float sx = (inp[ixx].h - inp[ix].h) / scale;
+		float sy = (inp[ixy].h - inp[ix].h) / scale;
+		float g = hypotf(sx, sy);
+
+		/* And add the oh so familiar convergence threshold to the comparison */
+		/* Again for floating point errors */
+		if(g > MAX_SLOPE + S_THRESHOLD)
+		{
+			g = MAX_SLOPE / g;
+			move_slope(sx, scale, out + ix, out + ixx, fabs(sx) * g, weight);
+			move_slope(sy, scale, out + ix, out + ixy, fabs(sy) * g, weight);
+
+			/* Modification applied, indiciate we are not done yet */
+			done = 0;
+		}
+	}
+
+	return done;
+}
+
+/*****************************/
+static int relax_dir_slope(
+	unsigned int size,
+	unsigned int ix,
+	float        scale,
+	float        weight,
+	Vertex*      inp,
+	Vertex*      out)
+{
+	int done = 1;
+
+	/* Loop over all 4 cardinal directions */
+	unsigned int d;
+	for(d = 0; d < 4; ++d)
+	{
+		/* Get the point in question and its two neighbours */
+		/* It basically rotates the neighbours clockwise around their center */
+		int ixx, ixy;
+		if(!get_neighbours(size, ix, d, &ixx, &ixy))
+			continue;
+
+		/* This scales gradient vector g by MaxSlope/|g| */
+		float sx = (inp[ixx].h - inp[ix].h) / scale;
+		float sy = (inp[ixy].h - inp[ix].h) / scale;
+		float g = hypotf(sx, sy);
+
+		/* Get maximum slope, add the falloff */
+		/* Okay so actually we scale it by dist^0.5 */
+		/* So it's not a linear falloff, otherwise it looks stupid... */
+		float s = MAX_SLOPE + MAX_SLOPE_FALLOFF * powf(inp[ix].c, .5f);
+
+		/* And add the oh so familiar convergence threshold to the comparison */
+		/* Again for floating point errors */
+		if(g > s + S_THRESHOLD)
+		{
+			g = s / g;
+			move_slope(sx, scale, out + ix, out + ixx, fabs(sx) * g, weight);
+			move_slope(sy, scale, out + ix, out + ixy, fabs(sy) * g, weight);
+
+			/* Modification applied, indiciate we are not done yet */
+			done = 0;
+		}
+	}
+
+	return done;
 }
 
 /*****************************/
@@ -71,71 +190,6 @@ static float calc_roughness(
 }
 
 /*****************************/
-static int relax_slope(
-	unsigned int size,
-	unsigned int ix,
-	float        scale,
-	float        weight,
-	Vertex*      inp,
-	Vertex*      out)
-{
-	int done = 1;
-
-	/* Loop over all 4 cardinal directions */
-	unsigned int d;
-	for(d = 0; d < 4; ++d)
-	{
-		/* Get the point in question and its two neighbours */
-		/* This loops over all 4 cardinal directions */
-		/* Rotating the neighbours clockwise around their center */
-		/* Yes they're signed integers... */
-		int ixx = ix +
-			((d == 0) ? (int)size : (d == 1) ? -1 : (d == 2) ? -(int)size : 1);
-		int ixy = ix +
-			((d == 0) ? 1 : (d == 1) ? (int)size : (d == 2) ? -1 : -(int)size);
-
-		/* Check bounds */
-		if(ixx < 0 || (unsigned int)ixx >= size*size)
-			continue;
-		if(ixy < 0 || (unsigned int)ixy >= size*size)
-			continue;
-		if(!SAME_COLUMN(ix, (unsigned int)((d==0||d==2) ? ixy : ixx), size))
-			continue;
-
-		/* This scales gradient vector g by MaxSlope/|g| */
-		float sx = (inp[ixx].h - inp[ix].h) / scale;
-		float sy = (inp[ixy].h - inp[ix].h) / scale;
-		float g = hypotf(sx, sy);
-
-		/* And add the oh so familiar convergence threshold to the comparison */
-		/* Again for floating point errors */
-		if(g > MAX_SLOPE + S_THRESHOLD)
-		{
-			g = MAX_SLOPE / g;
-			move_slope(sx, scale, out + ix, out + ixx, fabs(sx) * g, weight);
-			move_slope(sy, scale, out + ix, out + ixy, fabs(sy) * g, weight);
-
-			/* Modification applied, indiciate we are not done yet */
-			done = 0;
-		}
-	}
-
-	return done;
-}
-
-/*****************************/
-static int relax_dir_slope(
-	unsigned int size,
-	unsigned int ix,
-	float        scale,
-	float        weight,
-	Vertex*      inp,
-	Vertex*      out)
-{
-	return 1;
-}
-
-/*****************************/
 static int relax_roughness(
 	unsigned int size,
 	unsigned int ix,
@@ -163,7 +217,8 @@ static int relax_roughness(
 	for(c = -1; c <= 1; ++c)
 		for(r = -1; r <= 1; ++r)
 		{
-			if(c == 0 && r == 0) continue;
+			if(c == 0 && r == 0)
+				continue;
 
 			/* check bounds */
 			int ixx = ix + c * (int)size + r;

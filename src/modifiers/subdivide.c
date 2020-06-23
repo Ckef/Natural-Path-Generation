@@ -6,6 +6,9 @@
 #include <math.h>
 #include <stdlib.h>
 
+/* Non-zero if we want to use the directional derivative to fix discontinuities */
+#define USE_DIR_SLOPE  1
+
 /* Hardcoded path parameters for now */
 /* The influence is the distance from the path that the gradient constraint holds */
 /* Maximum gradient ascends linearly towards the distance RADIUS + INFLUENCE */
@@ -26,6 +29,7 @@
 
 /* The L2 distance (i.e. Euclidean ground distance) between two nodes */
 #define D(a,b) hypotf((int)(a).c-(int)(b).c, (int)(a).r-(int)(b).r)
+
 
 /* A* node */
 typedef struct
@@ -104,8 +108,8 @@ static void flag_ellipse(
 	float        border)
 {
 	/* Extend the ellipse with an influence border */
-	float rx2 = rx + border;
-	float ry2 = ry + border;
+	float rx2 = USE_DIR_SLOPE ? rx + border : rx;
+	float ry2 = USE_DIR_SLOPE ? ry + border : ry;
 
 	/* Loop over all vertices in its bounding box */
 	/* Yeah we're using signed integers... uum could be bettter? */
@@ -127,7 +131,8 @@ static void flag_ellipse(
 			float d = (c*(float)c) / (rx*rx) + (r*(float)r) / (ry*ry);
 			if(d <= 1)
 				data[i].flags = SLOPE;
-			else
+
+			else if(USE_DIR_SLOPE)
 			{
 				/* If not, it might be in our second ellipse */
 				d = (c*(float)c) / (rx2*rx2) + (r*(float)r) / (ry2*ry2);
@@ -135,12 +140,12 @@ static void flag_ellipse(
 				{
 					/* Also calculate the distance to the first ellipse */
 					/* Normalize it to [0,1] */
-					/* To use for a linear falloff of the gradient constraint */
+					/* To use as linear falloff of the DIR_SLOPE constraint */
 					d = find_ellipse_dist(rx, ry, c, r) / border;
-					if(!(data[i].flags & ROUGHNESS) || d < data[i].c)
+					if(!(data[i].flags & DIR_SLOPE) || d < data[i].c)
 						data[i].c = d;
 
-					data[i].flags = ROUGHNESS;
+					data[i].flags = DIR_SLOPE;
 				}
 			}
 		}
@@ -335,6 +340,14 @@ static int find_path(
 /*****************************/
 int mod_subdivide(unsigned int size, Vertex* data, ModData* mod)
 {
+	/* Let it rain roughness! */
+	if(!USE_DIR_SLOPE)
+	{
+		unsigned int i;
+		for(i = 0; i < size*size; ++i)
+			data[i].flags = ROUGHNESS;
+	}
+
 	/* Find a path from the lower left corner to the upper right corner */
 	ANode s = { .c = 0,      .r = 0      };
 	ANode g = { .c = size-1, .r = size-1 };

@@ -21,6 +21,15 @@ int mod_output(unsigned int size, Vertex* data, ModData* mod);
 int mod_subdivide(unsigned int size, Vertex* data, ModData* mod);
 
 /**
+ * Applies iterative relaxation to solve all 2D constraints.
+ * Constraints:
+ * - gradient (slope)
+ * - directional derivative (dir_slope)
+ * - roughness
+ */
+int mod_relax(unsigned int size, Vertex* data, ModData* mod);
+
+/**
  * Flattens the terrain to 1D.
  * It copies the center (rounded down) column to all other columns.
  */
@@ -31,11 +40,6 @@ int mod_flatten(unsigned int size, Vertex* data, ModData* mod);
  * It computes this on the center (rounded down) column.
  */
 int mod_relax_slope_1d(unsigned int size, Vertex* data, ModData* mod);
-
-/**
- * Applies iterative relaxation to solve 2D gradient constraints.
- */
-int mod_relax_slope(unsigned int size, Vertex* data, ModData* mod);
 
 
 #endif

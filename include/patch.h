@@ -14,11 +14,22 @@ typedef enum
 } ModMode;
 
 
+/* Constraint flags applied to vertices */
+typedef enum
+{
+	SLOPE     = 0b0001,
+	DIR_SLOPE = 0b0010, /* Directional derivative instead of gradient */
+	ROUGHNESS = 0b0100
+
+} VertexFlag;
+
+
 /* A vertex */
 typedef struct
 {
 	float h;
-	int flags; /* To signify what constraints apply */
+	float c[2]; /* Constraint values */
+	int flags;  /* See type VertexFlag */
 
 } Vertex;
 

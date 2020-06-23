@@ -6,23 +6,30 @@
 #include <math.h>
 #include <stdlib.h>
 
+/* Non-zero if we want to use the directional derivative to fix discontinuities */
+#define USE_DIR_SLOPE  0
+
 /* Hardcoded path parameters for now */
-#define PATH_RADIUS  2.2f
-#define COST_LIN     10000
-#define COST_POW     1.8f
+/* The influence is the distance from the path that the gradient constraint holds */
+/* Maximum gradient ascends linearly towards the distance RADIUS + INFLUENCE */
+#define PATH_RADIUS     2.2f
+#define PATH_INFLUENCE  10.0f
+#define COST_LIN        10000
+#define COST_POW        1.8f
 
 /* Some macros to make A* a bit easier */
 /* Firstly accessing data of a node */
-#define I(n)     (n.c * size + n.r) /* Index of a node into data */
-#define PREV(n)  AND[I(n)].prev     /* The node from which we got to a node */
-#define COST(n)  AND[I(n)].cost     /* Cost of the path to a node */
-#define SCORE(n) AND[I(n)].score    /* Score of a node */
+#define I(n)     ((n).c * size + (n).r) /* Index of a node into data */
+#define PREV(n)  AND[I(n)].prev         /* The node from which we got to a node */
+#define COST(n)  AND[I(n)].cost         /* Cost of the path to a node */
+#define SCORE(n) AND[I(n)].score        /* Score of a node */
 
 /* Compare two nodes */
-#define EQUAL(a,b) (a.c == b.c && a.r == b.r)
+#define EQUAL(a,b) ((a).c == (b).c && (a).r == (b).r)
 
-/* The L2 distance (i.e. Euclidean ground distance) from one node to another */
-#define D(a,b) sqrtf(((int)a.c-(int)b.c)*((int)a.c-(int)b.c) + ((int)a.r-(int)b.r)*((int)a.r-(int)b.r))
+/* The L2 distance (i.e. Euclidean ground distance) between two nodes */
+#define D(a,b) hypotf((int)(a).c-(int)(b).c, (int)(a).r-(int)(b).r)
+
 
 /* A* node */
 typedef struct
@@ -51,6 +58,115 @@ typedef struct
 
 } AHeap;
 
+
+/*****************************/
+static void find_ellipse_intersect(
+	float  a,
+	float  b,
+	float  px,
+	float  py,
+	float* ox,
+	float* oy)
+{
+	/* Implementation to get the closest point on an ellipse from another point */
+	/* I have no idea how it works, call it black magick */
+	/* Blog post: */
+	/*   https://wet-robots.ghost.io/simple-method-for-distance-to-ellipse/ */
+	/* Stackoverflow (for optimizations): */
+	/*   https://stackoverflow.com/a/46007540 */
+
+	float tx = .707f;
+	float ty = .707f;
+
+	unsigned int i;
+	for(i = 0; i < 3; ++i)
+	{
+		float ex = (a*a - b*b) * powf(tx, 3) / a;
+		float ey = (b*b - a*a) * powf(ty, 3) / b;
+		float rx = (a * tx) - ex;
+		float ry = (b * ty) - ey;
+		float qx = fabs(px) - ex;
+		float qy = fabs(py) - ey;
+		float r = hypotf(rx, ry);
+		float q = hypotf(qx, qy);
+
+		tx = fminf(1, fmaxf(0, (qx * r / q + ex) / a));
+		ty = fminf(1, fmaxf(0, (qy * r / q + ey) / b));
+		float t = hypotf(tx, ty);
+		tx /= t;
+		ty /= t;
+	}
+
+	*ox = copysignf(a * tx, px);
+	*oy = copysignf(b * ty, py);
+}
+
+/*****************************/
+static void flag_ellipse(
+	unsigned int size,
+	Vertex*      data,
+	ANode        center,
+	float        rx,
+	float        ry,
+	float        border)
+{
+	/* Extend the ellipse with an influence border */
+	float rx2 = USE_DIR_SLOPE ? rx + border : rx;
+	float ry2 = USE_DIR_SLOPE ? ry + border : ry;
+
+	/* Loop over all vertices in its bounding box */
+	/* Yeah we're using signed integers... uum could be bettter? */
+	int c, r;
+	for(c = (int)(-rx2); c <= (int)rx2; ++c)
+		for(r = (int)(-ry2); r <= (int)ry2; ++r)
+		{
+			int cc = (int)center.c + c;
+			int rr = (int)center.r + r;
+			unsigned int i = cc * size + rr;
+
+			/* Check bounds + check if a slope constraint was already assigned */
+			if(cc < 0 || cc >= (int)size || rr < 0 || rr >= (int)size)
+				continue;
+			if(data[i].flags & SLOPE)
+				continue;
+
+			/* Now check if it's inside our first ellipse */
+			float d = (c*(float)c) / (rx*rx) + (r*(float)r) / (ry*ry);
+			if(d <= 1)
+				data[i].flags = SLOPE;
+
+			else if(USE_DIR_SLOPE)
+			{
+				/* If not, it might be in our second ellipse */
+				d = (c*(float)c) / (rx2*rx2) + (r*(float)r) / (ry2*ry2);
+				if(d <= 1)
+				{
+					/* Calculate the vector to the first ellipse */
+					float tx, ty;
+					find_ellipse_intersect(rx, ry, c, r, &tx, &ty);
+
+					/* Normalize it to [0,1] */
+					tx = (c - tx) / border;
+					ty = (r - ty) / border;
+
+					/* If the distance is smaller than what is already stored, replace */
+					/* This so we have the smallest distance to the path */
+					float dNew = tx*tx + ty*ty;
+					float dCur =
+						data[i].c[0]*data[i].c[0] +
+						data[i].c[1]*data[i].c[1];
+
+					if(!(data[i].flags & DIR_SLOPE) || dNew < dCur)
+					{
+						data[i].c[0] = tx;
+						data[i].c[1] = ty;
+					}
+
+					data[i].flags = DIR_SLOPE;
+				}
+			}
+		}
+}
 
 /*****************************/
 static void heapify_up(
@@ -101,35 +217,6 @@ static void heapify_down(
 		/* And heapify the child i's at now */
 		heapify_down(heap, s, size, AND);
 	}
-}
-
-/*****************************/
-static void flag_ellipse(
-	unsigned int size,
-	Vertex*      data,
-	ANode        center,
-	float        rx,
-	float        ry,
-	int          flags)
-{
-	/* Loop over all vertices in its bounding box */
-	/* Yeah we're using signed integers... uum could be bettter? */
-	int c, r;
-	for(c = (int)(-rx); c <= (int)rx; ++c)
-		for(r = (int)(-ry); r <= (int)ry; ++r)
-		{
-			/* Validate the node */
-			int cc = (int)center.c + c;
-			int rr = (int)center.r + r;
-
-			if(cc < 0 || cc >= (int)size || rr < 0 || rr >= (int)size)
-				continue;
-
-			/* Now check if it's inside our ellipse */
-			float d = (c*(float)c) / (rx*rx) + (r*(float)r) / (ry*ry);
-			if(d <= 1)
-				data[cc * size + rr].flags |= flags;
-		}
 }
 
 /*****************************/
@@ -189,16 +276,17 @@ static int find_path(
 		/* If we've reached the goal, hurray! */
 		if(EQUAL(u, goal))
 		{
-			/* Color the path from start to goal */
-			/* i.e. add 1 to their flags */
+			/* Flag the path from start to goal */
+			float r = PATH_RADIUS / scale;
+			float b = PATH_INFLUENCE / scale;
 			while(!EQUAL(u, start))
 			{
-				flag_ellipse(size, data, u, PATH_RADIUS, PATH_RADIUS, 1);
+				flag_ellipse(size, data, u, r, r, b);
 				u = PREV(u);
 			}
 
 			/* Don't forget to color the start */
-			flag_ellipse(size, data, start, PATH_RADIUS, PATH_RADIUS, 1);
+			flag_ellipse(size, data, start, r, r, b);
 
 			free(Q.data);
 			free(AND);
@@ -230,11 +318,10 @@ static int find_path(
 				/* distance + slope cost * distance */
 				/* Where the slope cost has a power and linear component */
 				float dist = D(u,v) * scale;
-				float slope =
+				float slope = fabs(
 					(data[v.c * size + v.r].h -
-					data[u.c * size + u.r].h) / dist;
+					data[u.c * size + u.r].h) / dist);
 
-				slope = slope > 0 ? slope : -slope;
 				float alt = COST(u) + dist * (1 + powf(slope, COST_POW) * COST_LIN);
 
 				/* If the alternative cost is smaller, set new path */
@@ -269,6 +356,14 @@ static int find_path(
 /*****************************/
 int mod_subdivide(unsigned int size, Vertex* data, ModData* mod)
 {
+	/* Let it rain roughness! */
+	if(!USE_DIR_SLOPE)
+	{
+		unsigned int i;
+		for(i = 0; i < size*size; ++i)
+			data[i].flags = ROUGHNESS;
+	}
+
 	/* Find a path from the lower left corner to the upper right corner */
 	ANode s = { .c = 0,      .r = 0      };
 	ANode g = { .c = size-1, .r = size-1 };

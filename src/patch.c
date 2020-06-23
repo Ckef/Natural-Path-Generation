@@ -37,20 +37,10 @@ static int upload_vertex_data(Patch* patch)
 			glm_vec3_zero(data + (i*9+3));
 
 			/* Determine color from the flags */
-			if(patch->data[i].flags & 1)
-			{
-				/* Some red terrain */
-				data[i*9+6] = 1;
-				data[i*9+7] = 0;
-				data[i*9+8] = 0;
-			}
-			else
-			{
-				/* Some yellow terrain */
-				data[i*9+6] = .8f;
-				data[i*9+7] = .8f;
-				data[i*9+8] = 0;
-			}
+			int f = patch->data[i].flags;
+			data[i*9+6] = f & SLOPE ? 1 : f & DIR_SLOPE ? 1 : 0;
+			data[i*9+7] = f & SLOPE ? 0 : f & DIR_SLOPE ? 1 : 1;
+			data[i*9+8] = f & SLOPE ? 0 : f & DIR_SLOPE ? 0 : 0;
 		}
 
 	/* Calculate us some normal data */

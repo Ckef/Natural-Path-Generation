@@ -4,6 +4,10 @@
 #include "scene.h"
 #include <stdlib.h>
 
+/* Window dimensions */
+#define WINDOW_WIDTH   1200
+#define WINDOW_HEIGHT  600
+
 /* Scene to forward input callbacks to */
 static Scene* active_scene = NULL;
 
@@ -52,7 +56,9 @@ int main(int argc, char* argv[])
 	/* Create a window */
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-	GLFWwindow* win = glfwCreateWindow(900, 500, "Terrainz", NULL, NULL);
+
+	GLFWwindow* win = glfwCreateWindow(
+		WINDOW_WIDTH, WINDOW_HEIGHT, "Terrainz", NULL, NULL);
 
 	if(!win)
 	{

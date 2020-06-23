@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 /* Non-zero if we want to use the directional derivative to fix discontinuities */
-#define USE_DIR_SLOPE  1
+#define USE_DIR_SLOPE  0
 
 /* Hardcoded path parameters for now */
 /* The influence is the distance from the path that the gradient constraint holds */

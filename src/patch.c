@@ -38,8 +38,8 @@ static int upload_vertex_data(Patch* patch)
 
 			/* Determine color from the flags */
 			int f = patch->data[i].flags;
-			data[i*9+6] = f & SLOPE ? 1 : f & ROUGHNESS ? 0 : .8f;
-			data[i*9+7] = f & SLOPE ? 0 : f & ROUGHNESS ? 1 : .8f;
+			data[i*9+6] = f & SLOPE ? 1 : f & ROUGHNESS ? 1 : 0;
+			data[i*9+7] = f & SLOPE ? 0 : f & ROUGHNESS ? 1 : 1;
 			data[i*9+8] = f & SLOPE ? 0 : f & ROUGHNESS ? 0 : 0;
 		}
 

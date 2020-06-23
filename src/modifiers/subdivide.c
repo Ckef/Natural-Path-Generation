@@ -7,9 +7,12 @@
 #include <stdlib.h>
 
 /* Hardcoded path parameters for now */
-#define PATH_RADIUS  2.2f
-#define COST_LIN     10000
-#define COST_POW     1.8f
+/* The influence is the distance from the path that the gradient constraint holds */
+/* Maximum gradient ascends linearly towards the distance RADIUS + INFLUENCE */
+#define PATH_RADIUS     2.2f
+#define PATH_INFLUENCE  10.0f
+#define COST_LIN        10000
+#define COST_POW        1.8f
 
 /* Some macros to make A* a bit easier */
 /* Firstly accessing data of a node */
@@ -109,25 +112,39 @@ static void flag_ellipse(
 	Vertex*      data,
 	ANode        center,
 	float        rx,
-	float        ry)
+	float        ry,
+	float        border)
 {
+	/* Extend the ellipse with an influence border */
+	float rx2 = rx + border;
+	float ry2 = ry + border;
+
 	/* Loop over all vertices in its bounding box */
 	/* Yeah we're using signed integers... uum could be bettter? */
 	int c, r;
-	for(c = (int)(-rx); c <= (int)rx; ++c)
-		for(r = (int)(-ry); r <= (int)ry; ++r)
+	for(c = (int)(-rx2); c <= (int)rx2; ++c)
+		for(r = (int)(-ry2); r <= (int)ry2; ++r)
 		{
-			/* Validate the node */
 			int cc = (int)center.c + c;
 			int rr = (int)center.r + r;
 
+			/* Check bounds + check if a slope constraint was already assigned */
 			if(cc < 0 || cc >= (int)size || rr < 0 || rr >= (int)size)
 				continue;
+			if(data[cc * size + rr].flags & SLOPE)
+				continue;
 
-			/* Now check if it's inside our ellipse */
+			/* Now check if it's inside our first ellipse */
 			float d = (c*(float)c) / (rx*rx) + (r*(float)r) / (ry*ry);
 			if(d <= 1)
 				data[cc * size + rr].flags = SLOPE;
+			else
+			{
+				/* If not, it might be in our second ellipse */
+				d = (c*(float)c) / (rx2*rx2) + (r*(float)r) / (ry2*ry2);
+				if(d <= 1)
+					data[cc * size + rr].flags = ROUGHNESS;
+			}
 		}
 }
 
@@ -190,14 +207,15 @@ static int find_path(
 		{
 			/* Flag the path from start to goal */
 			float r = PATH_RADIUS / scale;
+			float b = PATH_INFLUENCE / scale;
 			while(!EQUAL(u, start))
 			{
-				flag_ellipse(size, data, u, r, r);
+				flag_ellipse(size, data, u, r, r, b);
 				u = PREV(u);
 			}
 
 			/* Don't forget to color the start */
-			flag_ellipse(size, data, start, r, r);
+			flag_ellipse(size, data, start, r, r, b);
 
 			free(Q.data);
 			free(AND);
@@ -268,11 +286,6 @@ static int find_path(
 /*****************************/
 int mod_subdivide(unsigned int size, Vertex* data, ModData* mod)
 {
-	/* Roughness everywhere! */
-	unsigned int i;
-	for(i = 0; i < size*size; ++i)
-		data[i].flags = ROUGHNESS;
-
 	/* Find a path from the lower left corner to the upper right corner */
 	ANode s = { .c = 0,      .r = 0      };
 	ANode g = { .c = size-1, .r = size-1 };

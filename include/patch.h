@@ -19,7 +19,8 @@ typedef enum
 {
 	SLOPE     = 0b0001,
 	DIR_SLOPE = 0b0010, /* Directional derivative instead of gradient */
-	ROUGHNESS = 0b0100
+	ROUGHNESS = 0b0100,
+	POSITION  = 0b1000
 
 } VertexFlag;
 
@@ -44,6 +45,7 @@ typedef struct
 	int          done;       /* Non-zero when no iterations will be done anymore */
 	unsigned int iterations; /* Number of iterations done */
 	Vertex*      buffer;
+	Vertex*      local[9];   /* The 3x3 (column-major) constraining local neighbourhood of patches */
 
 } ModData;
 
@@ -100,6 +102,12 @@ int create_patch(Patch* patch, ModMode mode, unsigned int size);
 void destroy_patch(Patch* patch);
 
 /**
+ * Checks if a patch is valid, if it is destroyed, it will be rendered invalid.
+ * If a piece of memory is all 0's, it will register as an invalid patch.
+ */
+int is_patch(Patch* patch);
+
+/**
  * Draws a patch.
  *
  * Note: Assumes some shader program is bound and set up.
@@ -111,9 +119,14 @@ void draw_patch(Patch* patch);
  *
  * @param  generator  Function that generates a terrain.
  * @param  mods       Array of modifiers (can be NULL), last element must be NULL.
+ * @param  local      The 3x3 neighborhoud of this patch at time of creation, can be NULL.
  * @return            Zero if population failed.
  */
-int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods);
+int populate_patch(
+	Patch*         patch,
+	PatchGenerator generator,
+	PatchModifier* mods,
+	Patch*         local[]);
 
 /**
  * Updates a patch, i.e. runs all modifiers that still need to iterate.

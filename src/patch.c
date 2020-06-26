@@ -71,6 +71,19 @@ static int upload_vertex_data(Patch* patch)
 			glm_vec3_add(normal, data + (iTR*9+3), data + (iTR*9+3));
 		}
 
+	/* So we're going to override the normals at the borders */
+	/* This so when the borders of patches are stitched, so are the normals */
+	/* It's kind of a cheat but oh well... */
+	/* TODO: Maybe improve the border constraint so the first derivative is kept */
+	/* i.e. the point besides the border is also position constrained */
+	for(r = 0; r < patch->size; ++r)
+	{
+		data[r*9+3] = 0.0f;
+		data[((patch->size-1)*patch->size+r)*9+3] = 0.0f;
+		data[(r*patch->size)*9+4] = 0.0f;
+		data[(r*patch->size+patch->size-1)*9+4] = 0.0f;
+	}
+
 	/* Now just normalize 'm all */
 	for(c = 0; c < patch->size; ++c)
 		for(r = 0; r < patch->size; ++r)
@@ -184,6 +197,15 @@ void destroy_patch(Patch* patch)
 
 	free(patch->mods);
 	free(patch->data);
+
+	/* So is_patch will return 0 */
+	patch->data = NULL;
+}
+
+/*****************************/
+int is_patch(Patch* patch)
+{
+	return patch->data != NULL;
 }
 
 /*****************************/
@@ -195,7 +217,11 @@ void draw_patch(Patch* patch)
 }
 
 /*****************************/
-int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods)
+int populate_patch(
+	Patch*         patch,
+	PatchGenerator generator,
+	PatchModifier* mods,
+	Patch*         local[])
 {
 	/* Destroy the current modifiers */
 	size_t m;
@@ -230,6 +256,17 @@ int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods)
 			patch->mods[m].done       = 0;
 			patch->mods[m].iterations = 0;
 			patch->mods[m].buffer     = NULL;
+
+			/* If we have local neighbourhood data, grab their vertex data */
+			/* While we're at it, check that their size is equivalent */
+			unsigned int n;
+			for(n = 0; n < 9; ++n)
+			{
+				if(local && local[n] && local[n]->size == patch->size)
+					patch->mods[m].local[n] = local[n]->data;
+				else
+					patch->mods[m].local[n] = NULL;
+			}
 		}
 	}
 

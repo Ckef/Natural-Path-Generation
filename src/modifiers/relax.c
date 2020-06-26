@@ -11,7 +11,7 @@
 #define MAX_SLOPE          0.0025f
 #define MAX_SLOPE_FALLOFF  0.05f
 #define S_THRESHOLD        0.00001f /* Convergence threshold of slope error */
-#define R_THRESHOLD        0.005f /* Convergence threshold of roughness error */
+#define R_THRESHOLD        0.04f /* Convergence threshold of roughness error */
 #define MAX_ITERATIONS     10000
 #define STEP_SIZE          10
 
@@ -164,7 +164,7 @@ static float calc_roughness(
 	float        scale)
 {
 	/* Loop over all neighbors and sum their differences */
-	float R2 = 0;
+	float R = 0;
 	int c, r;
 	for(c = -1; c <= 1; ++c)
 		for(r = -1; r <= 1; ++r)
@@ -183,11 +183,10 @@ static float calc_roughness(
 			/* Note we divide by scale to get slope */
 			/* This is so this metric is scale invariant */
 			float s = (data[ixx].h - data[ix].h) / scale;
-			R2 += s*s;
+			R += s*s;
 		}
 
-	/* It's actually roughness squared */
-	return R2;
+	return sqrtf(R);
 }
 
 /*****************************/
@@ -206,8 +205,7 @@ static int relax_roughness(
 		return 1;
 
 	/* Get the factor to correct the current roughness to the desired one */
-	/* Each term is squared, so take the square root of this factor */
-	R = sqrtf(inp[ix].c[0] / R);
+	R = inp[ix].c[0] / R;
 
 	/* Smth to store the move values in */
 	float move[9] = {0};
@@ -368,6 +366,17 @@ int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 			if(inp[ix].flags & ROUGHNESS)
 				done &= relax_roughness(size, ix, scale, weight, inp, data);
 		}
+
+		/* Loop over all vertices again for the position constraint */
+		/* It is important this is handled as last and separately */
+		/* This is because it overrides the height of a vertex completely */
+		/* This is the part where we are allowed to create/destroy material */
+		for(ix = 0; ix < size*size; ++ix)
+			if(inp[ix].flags & POSITION)
+			{
+				done &= (data[ix].h == inp[ix].c[1]);
+				data[ix].h = inp[ix].c[1];
+			}
 
 		/* Exit if no changes were made */
 		/* Or when the maximum number of iterations ended */

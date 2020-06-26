@@ -71,6 +71,19 @@ static int upload_vertex_data(Patch* patch)
 			glm_vec3_add(normal, data + (iTR*9+3), data + (iTR*9+3));
 		}
 
+	/* So we're going to override the normals at the borders */
+	/* This so when the borders of patches are stitched, so are the normals */
+	/* It's kind of a cheat but oh well... */
+	/* TODO: Maybe improve the border constraint so the first derivative is kept */
+	/* i.e. the point besides the border is also position constrained */
+	for(r = 0; r < patch->size; ++r)
+	{
+		data[r*9+3] = 0.0f;
+		data[((patch->size-1)*patch->size+r)*9+3] = 0.0f;
+		data[(r*patch->size)*9+4] = 0.0f;
+		data[(r*patch->size+patch->size-1)*9+4] = 0.0f;
+	}
+
 	/* Now just normalize 'm all */
 	for(c = 0; c < patch->size; ++c)
 		for(r = 0; r < patch->size; ++r)

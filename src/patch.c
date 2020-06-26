@@ -184,6 +184,15 @@ void destroy_patch(Patch* patch)
 
 	free(patch->mods);
 	free(patch->data);
+
+	/* So is_patch will return 0 */
+	patch->data = NULL;
+}
+
+/*****************************/
+int is_patch(Patch* patch)
+{
+	return patch->data != NULL;
 }
 
 /*****************************/

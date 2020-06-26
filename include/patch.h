@@ -19,7 +19,8 @@ typedef enum
 {
 	SLOPE     = 0b0001,
 	DIR_SLOPE = 0b0010, /* Directional derivative instead of gradient */
-	ROUGHNESS = 0b0100
+	ROUGHNESS = 0b0100,
+	POSITION  = 0b1000
 
 } VertexFlag;
 
@@ -98,6 +99,12 @@ int create_patch(Patch* patch, ModMode mode, unsigned int size);
  * Destroys a patch.
  */
 void destroy_patch(Patch* patch);
+
+/**
+ * Checks if a patch is valid, if it is destroyed, it will be rendered invalid.
+ * If a piece of memory is all 0's, it will register as an invalid patch.
+ */
+int is_patch(Patch* patch);
 
 /**
  * Draws a patch.

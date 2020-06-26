@@ -8,43 +8,104 @@
 #include <string.h>
 
 /*****************************/
+static size_t get_grid_index(
+	unsigned int gridSize,
+	unsigned int x,
+	unsigned int y,
+	unsigned int quadrant)
+{
+	/* We're using 4 column-major quadrants, interlaced into the same data array */
+	/* Each quadrant has the same dimensions and are square */
+	/* The upper right quadrant is 0, we rotate clockwise up to 3 */
+	return (x * gridSize + y) * 4 + quadrant;
+}
+
+/*****************************/
 static int add_patch(Scene* scene, PatchGenerator generator, PatchModifier* mods)
 {
-	/* Allocate more memory */
-	size_t newSize = (scene->num_patches+1) * sizeof(Patch);
-	Patch* new = realloc(scene->patches, newSize);
+	/* So we need to get the minimum amount of memory to store all 4 equivalent quadrants */
+	/* To do this, we first get the x and y position in the relevant quadrant */
+	/* Then we get the minimal quadrant size we need */
+	unsigned int sx = (scene->help_pos[0] < 0) ? 1 : 0;
+	unsigned int sy = (scene->help_pos[1] < 0) ? 1 : 0;
+	unsigned int x = abs(scene->help_pos[0]) - sx;
+	unsigned int y = abs(scene->help_pos[1]) - sy;
+	unsigned int minGridSize = (x > y ? x : y) + 1;
 
-	if(!new)
+	if(minGridSize > scene->grid_size)
 	{
-		throw_error("Could not reallocate memory for a new patch.");
+		/* Allocate more memory, multiply by 4 for all quadrants */
+		size_t newSize = minGridSize * minGridSize * 4;
+		Patch* new = realloc(scene->patches, newSize * sizeof(Patch));
+
+		if(!new)
+		{
+			throw_error("Could not reallocate memory for a new patch.");
+			return 0;
+		}
+
+		/* Set memory to zero for the newly allocated spots so is_patch returns 0 */
+		size_t oldSize = scene->grid_size * scene->grid_size * 4;
+		memset(new + oldSize, 0, (newSize - oldSize) * sizeof(Patch));
+
+		if(scene->grid_size)
+		{
+			/* We need to move all the current patches */
+			/* Start iterating from the back so we don't override existing patches */
+			/* Also note we don't need to move the first column */
+			unsigned int ix, iy;
+			for(ix = scene->grid_size - 1; ix > 0; --ix)
+				for(iy = scene->grid_size; iy > 0; --iy)
+				{
+					/* Move to the new location and set the old one to 0's */
+					/* Just copy all quadrants together btw */
+					memcpy(
+						new + get_grid_index(minGridSize, ix, iy-1, 0),
+						new + get_grid_index(scene->grid_size, ix, iy-1, 0),
+						sizeof(Patch) * 4);
+					memset(
+						new + get_grid_index(scene->grid_size, ix, iy-1, 0),
+						0,
+						sizeof(Patch) * 4);
+				}
+		}
+
+		scene->patches = new;
+		scene->grid_size = minGridSize;
+	}
+
+	/* Get the index of the new patch */
+	unsigned int quadrant = (sx && sy) ? 2 : sx ? 3 : sy ? 1 : 0;
+	Patch* p = scene->patches + get_grid_index(scene->grid_size, x, y, quadrant);
+
+	/* Check if there was already a patch */
+	if(is_patch(p))
+	{
+		output("Patch cannot be placed on top of another patch.");
 		return 0;
 	}
 
-	scene->patches = new;
-	new += scene->num_patches;
-
 	/* Create a new patch */
-	if(!create_patch(new, scene->patch_mode, scene->patch_size))
+	if(!create_patch(p, scene->patch_mode, scene->patch_size))
 	{
 		throw_error("Could not create a new patch for scene.");
 		return 0;
 	}
 
 	/* Set its position to the current selection */
-	new->pos[0] = scene->help_pos[0] * (DEF_PATCH_SIZE-1);
-	new->pos[1] = scene->help_pos[1] * (DEF_PATCH_SIZE-1);
-	new->pos[2] = scene->help_pos[2] * (DEF_PATCH_SIZE-1);
+	p->pos[0] = scene->help_pos[0] * (DEF_PATCH_SIZE-1);
+	p->pos[1] = scene->help_pos[1] * (DEF_PATCH_SIZE-1);
+	p->pos[2] = 0;
 
 	/* Populate the new patch */
-	if(!populate_patch(new, generator, mods))
+	if(!populate_patch(p, generator, mods))
 	{
 		throw_error("Population of newly created patch failed.");
+		destroy_patch(p);
 		return 0;
 	}
 
-	/* Only update num patches now so we don't get confused later on */
-	++scene->num_patches;
-
+	/* Yep done. */
 	output("Patch was created succesfully.");
 
 	return 1;
@@ -135,7 +196,7 @@ int create_scene(Scene* scene, ModMode mode, unsigned int patchSize)
 	/* Make sure to initialize the helper position here */
 	memset(scene->help_pos, 0, sizeof(scene->help_pos));
 	scene->patches = NULL;
-	scene->num_patches = 0;
+	scene->grid_size = 0;
 
 	/* Create helper geometry */
 	/* Contains a square to indicate the selected patch */
@@ -187,8 +248,9 @@ void destroy_scene(Scene* scene)
 
 	/* Loop over all patches to destroy them */
 	size_t p;
-	for(p = 0; p < scene->num_patches; ++p)
-		destroy_patch(scene->patches + p);
+	for(p = 0; p < scene->grid_size * scene->grid_size * 4; ++p)
+		if(is_patch(scene->patches + p))
+			destroy_patch(scene->patches + p);
 
 	free(scene->patches);
 }
@@ -208,8 +270,11 @@ void draw_scene(Scene* scene)
 	mat4 mvp;
 
 	size_t p;
-	for(p = 0; p < scene->num_patches; ++p)
+	for(p = 0; p < scene->grid_size * scene->grid_size * 4; ++p)
 	{
+		if(!is_patch(scene->patches + p))
+			continue;
+
 		/* The height (z-coord) of all patches is roughly in [0,1] */
 		/* So move it down 0.5 and scale it */
 		glm_translate_to(scene->camera.pv, scene->patches[p].pos, mvp);
@@ -229,7 +294,7 @@ void draw_scene(Scene* scene)
 	vec3 hpos = {
 		scene->help_pos[0] * (DEF_PATCH_SIZE-1),
 		scene->help_pos[1] * (DEF_PATCH_SIZE-1),
-		scene->help_pos[2] * (DEF_PATCH_SIZE-1)};
+		0};
 
 	glm_translate_to(scene->camera.pv, hpos, mvp);
 	glUniformMatrix4fv(loc, 1, GL_FALSE, (float*)mvp);
@@ -255,8 +320,9 @@ void update_scene(Scene* scene, double dTime)
 
 	/* Loop over all patches to update them */
 	size_t p;
-	for(p = 0; p < scene->num_patches; ++p)
-		update_patch(scene->patches + p);
+	for(p = 0; p < scene->grid_size * scene->grid_size * 4; ++p)
+		if(is_patch(scene->patches + p))
+			update_patch(scene->patches + p);
 }
 
 /*****************************/

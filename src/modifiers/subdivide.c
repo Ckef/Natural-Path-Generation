@@ -11,7 +11,7 @@
 
 /* Hardcoded path parameters for now */
 /* The influence is the distance from the path that the gradient constraint holds */
-/* Maximum gradient ascends linearly towards the distance RADIUS + INFLUENCE */
+/* Maximum gradient ascends along the distance RADIUS + INFLUENCE */
 #define PATH_RADIUS     2.2f
 #define PATH_INFLUENCE  10.0f
 #define COST_LIN        10000

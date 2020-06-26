@@ -40,7 +40,7 @@ typedef struct
 {
 	Camera       camera;
 	Patch*       patches;
-	size_t       num_patches;
+	unsigned int grid_size; /* Width/height of each quadrant */
 	unsigned int patch_size;
 	Shader       patch_shader;
 	ModMode      patch_mode;

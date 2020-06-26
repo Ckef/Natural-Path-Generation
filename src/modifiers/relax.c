@@ -367,6 +367,17 @@ int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 				done &= relax_roughness(size, ix, scale, weight, inp, data);
 		}
 
+		/* Loop over all vertices again for the position constraint */
+		/* It is important this is handled as last and separately */
+		/* This is because it overrides the height of a vertex completely */
+		/* This is the part where we are allowed to create/destroy material */
+		for(ix = 0; ix < size*size; ++ix)
+			if(inp[ix].flags & POSITION)
+			{
+				done &= (data[ix].h == inp[ix].c[1]);
+				data[ix].h = inp[ix].c[1];
+			}
+
 		/* Exit if no changes were made */
 		/* Or when the maximum number of iterations ended */
 		if(done || mod->iterations == MAX_ITERATIONS)

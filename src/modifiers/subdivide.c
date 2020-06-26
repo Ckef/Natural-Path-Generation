@@ -7,7 +7,8 @@
 #include <stdlib.h>
 
 /* Non-zero if we want to use the directional derivative to fix discontinuities */
-#define USE_DIR_SLOPE  0
+#define USE_DIR_SLOPE      0
+#define USE_BORDER_STITCH  1
 
 /* Hardcoded path parameters for now */
 /* The influence is the distance from the path that the gradient constraint holds */
@@ -354,15 +355,68 @@ static int find_path(
 }
 
 /*****************************/
+static void flag_borders(unsigned int size, Vertex* data, ModData* mod)
+{
+	/* Loop over the local neighborhoud */
+	int c, r;
+	for(c = -1; c <= 1; ++c)
+		for(r = -1; r <= 1; ++r)
+		{
+			/* Check if there is a neighbour */
+			Vertex* hdata = mod->local[(c+1)*3+(r+1)];
+			if((c == 0 && r == 0) || !hdata)
+				continue;
+
+			/* From here on we're going to flag stuff */
+			/* We use the second constraint value */
+			/* The first is taken by roughness */
+			unsigned int i;
+
+			/* Handle corners */
+			if(c != 0 && r != 0)
+			{
+				unsigned int id =
+					(c == -1 && r == -1) ? 0 :
+					(c == -1 && r ==  1) ? size-1 :
+					(c ==  1 && r == -1) ? (size-1) * size :
+					size * size - 1;
+				unsigned int ih =
+					(c == -1 && r == -1) ? size * size - 1 :
+					(c == -1 && r ==  1) ? (size-1) * size :
+					(c ==  1 && r == -1) ? size-1 :
+					0;
+
+				data[id].flags |= POSITION;
+				data[id].c[1] = hdata[ih].h;
+			}
+
+			/* Handle edges */
+			else for(i = 0; i < size; ++i)
+			{
+				unsigned int id =
+					(c == -1) ? i :
+					(c ==  1) ? (size-1) * size + i :
+					(r == -1) ? i * size :
+					i * size + (size-1);
+				unsigned int ih =
+					(c == -1) ? (size-1) * size + i :
+					(c ==  1) ? i :
+					(r == -1) ? i * size + (size-1) :
+					i * size;
+
+				data[id].flags |= POSITION;
+				data[id].c[1] = hdata[ih].h;
+			}
+		}
+}
+
+/*****************************/
 int mod_subdivide(unsigned int size, Vertex* data, ModData* mod)
 {
 	/* Let it rain roughness! */
-	if(!USE_DIR_SLOPE)
-	{
-		unsigned int i;
-		for(i = 0; i < size*size; ++i)
-			data[i].flags = ROUGHNESS;
-	}
+	unsigned int i;
+	for(i = 0; i < size*size; ++i)
+		data[i].flags = ROUGHNESS;
 
 	/* Find a path from the lower left corner to the upper right corner */
 	ANode s = { .c = 0,      .r = 0      };
@@ -370,6 +424,12 @@ int mod_subdivide(unsigned int size, Vertex* data, ModData* mod)
 
 	if(!find_path(size, data, s, g))
 		return 0;
+
+	/* Lastly, constrain the borders to match the neighbors */
+	/* It is important this is done last */
+	/* This because this constraint should be OR'd with the other constraints */
+	if(USE_BORDER_STITCH)
+		flag_borders(size, data, mod);
 
 	/* We don't need to iterate this modifier */
 	mod->done = 1;

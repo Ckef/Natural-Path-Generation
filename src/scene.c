@@ -8,33 +8,46 @@
 #include <string.h>
 
 /*****************************/
-static size_t get_grid_index(
-	unsigned int gridSize,
-	unsigned int x,
-	unsigned int y,
-	unsigned int quadrant)
+static unsigned int get_min_grid_size(int x, int y)
+{
+	/* So we get the position in the relevant quadrant */
+	x = abs(x) - (x < 0 ? 1 : 0);
+	y = abs(y) - (y < 0 ? 1 : 0);
+
+	/* And check how large it must be */
+	return (x > y ? x : y) + 1;
+}
+
+/*****************************/
+static size_t get_grid_index(unsigned int gridSize, int x, int y)
 {
 	/* We're using 4 column-major quadrants, interlaced into the same data array */
 	/* Each quadrant has the same dimensions and are square */
 	/* The upper right quadrant is 0, we rotate clockwise up to 3 */
+	/* To get an index, we first get the quadrant we're in */
+	unsigned int sx = (x < 0) ? 1 : 0;
+	unsigned int sy = (y < 0) ? 1 : 0;
+	unsigned int quadrant = (sx && sy) ? 2 : sx ? 3 : sy ? 1 : 0;
+
+	/* Then compute the position in the interlaced array */
+	x = abs(x) - sx;
+	y = abs(y) - sy;
+
 	return (x * gridSize + y) * 4 + quadrant;
 }
 
 /*****************************/
 static int add_patch(Scene* scene, PatchGenerator generator, PatchModifier* mods)
 {
-	/* So we need to get the minimum amount of memory to store all 4 equivalent quadrants */
-	/* To do this, we first get the x and y position in the relevant quadrant */
-	/* Then we get the minimal quadrant size we need */
-	unsigned int sx = (scene->help_pos[0] < 0) ? 1 : 0;
-	unsigned int sy = (scene->help_pos[1] < 0) ? 1 : 0;
-	unsigned int x = abs(scene->help_pos[0]) - sx;
-	unsigned int y = abs(scene->help_pos[1]) - sy;
-	unsigned int minGridSize = (x > y ? x : y) + 1;
+	/* First check if we have enough memory */
+	int x = scene->help_pos[0];
+	int y = scene->help_pos[1];
+	unsigned int minGridSize = get_min_grid_size(x, y);
 
 	if(minGridSize > scene->grid_size)
 	{
 		/* Allocate more memory, multiply by 4 for all quadrants */
+		/* Again, interlaced data array :) */
 		size_t newSize = minGridSize * minGridSize * 4;
 		Patch* new = realloc(scene->patches, newSize * sizeof(Patch));
 
@@ -59,14 +72,11 @@ static int add_patch(Scene* scene, PatchGenerator generator, PatchModifier* mods
 				{
 					/* Move to the new location and set the old one to 0's */
 					/* Just copy all quadrants together btw */
-					memcpy(
-						new + get_grid_index(minGridSize, ix, iy-1, 0),
-						new + get_grid_index(scene->grid_size, ix, iy-1, 0),
-						sizeof(Patch) * 4);
-					memset(
-						new + get_grid_index(scene->grid_size, ix, iy-1, 0),
-						0,
-						sizeof(Patch) * 4);
+					Patch* p = new + get_grid_index(scene->grid_size, ix, iy-1);
+					Patch* np = new + get_grid_index(minGridSize, ix, iy-1);
+
+					memcpy(np, p, sizeof(Patch) * 4);
+					memset(p, 0, sizeof(Patch) * 4);
 				}
 		}
 
@@ -75,8 +85,7 @@ static int add_patch(Scene* scene, PatchGenerator generator, PatchModifier* mods
 	}
 
 	/* Get the index of the new patch */
-	unsigned int quadrant = (sx && sy) ? 2 : sx ? 3 : sy ? 1 : 0;
-	Patch* p = scene->patches + get_grid_index(scene->grid_size, x, y, quadrant);
+	Patch* p = scene->patches + get_grid_index(scene->grid_size, x, y);
 
 	/* Check if there was already a patch */
 	if(is_patch(p))
@@ -93,12 +102,28 @@ static int add_patch(Scene* scene, PatchGenerator generator, PatchModifier* mods
 	}
 
 	/* Set its position to the current selection */
-	p->pos[0] = scene->help_pos[0] * (DEF_PATCH_SIZE-1);
-	p->pos[1] = scene->help_pos[1] * (DEF_PATCH_SIZE-1);
+	p->pos[0] = x * (DEF_PATCH_SIZE-1);
+	p->pos[1] = y * (DEF_PATCH_SIZE-1);
 	p->pos[2] = 0;
 
+	/* Get the local neighbourhood of the patch */
+	/* We're just looping over it and checking if there is a patch */
+	Patch* local[9];
+	memset(local, 0, sizeof(Patch*) * 9);
+
+	int c, r;
+	for(c = -1; c <= 1; ++c)
+		for(r = -1; r <= 1; ++r)
+		{
+			unsigned int i = get_grid_index(scene->grid_size, x + c, y + r);
+			Patch* pn = scene->patches + i;
+
+			if(i < scene->grid_size * scene->grid_size * 4)
+				if(is_patch(pn)) local[(c+1)*3+(r+1)] = pn;
+		}
+
 	/* Populate the new patch */
-	if(!populate_patch(p, generator, mods))
+	if(!populate_patch(p, generator, mods, local))
 	{
 		throw_error("Population of newly created patch failed.");
 		destroy_patch(p);

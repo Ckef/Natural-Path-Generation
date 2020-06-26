@@ -45,6 +45,7 @@ typedef struct
 	int          done;       /* Non-zero when no iterations will be done anymore */
 	unsigned int iterations; /* Number of iterations done */
 	Vertex*      buffer;
+	Vertex*      local[9];   /* The 3x3 (column-major) constraining local neighbourhood of patches */
 
 } ModData;
 
@@ -118,9 +119,14 @@ void draw_patch(Patch* patch);
  *
  * @param  generator  Function that generates a terrain.
  * @param  mods       Array of modifiers (can be NULL), last element must be NULL.
+ * @param  local      The 3x3 neighborhoud of this patch at time of creation, can be NULL.
  * @return            Zero if population failed.
  */
-int populate_patch(Patch* patch, PatchGenerator generator, PatchModifier* mods);
+int populate_patch(
+	Patch*         patch,
+	PatchGenerator generator,
+	PatchModifier* mods,
+	Patch*         local[]);
 
 /**
  * Updates a patch, i.e. runs all modifiers that still need to iterate.

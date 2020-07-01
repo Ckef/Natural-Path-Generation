@@ -76,6 +76,8 @@ static int upload_vertex_data(Patch* patch)
 	/* It's kind of a cheat but oh well... */
 	/* TODO: Maybe improve the border constraint so the first derivative is kept */
 	/* i.e. the point besides the border is also position constrained */
+	/* I did this... not sure if it's useful */
+	/* TODO: Decide if either this or the derivative constraint is useful */
 	for(r = 0; r < patch->size; ++r)
 	{
 		data[r*9+3] = 0.0f;

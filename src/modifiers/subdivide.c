@@ -6,9 +6,10 @@
 #include <math.h>
 #include <stdlib.h>
 
-/* Non-zero if we want to use the directional derivative to fix discontinuities */
+/* Non-zero if we want to use the direction derivative, border, and border derivative constraints */
 #define USE_DIR_SLOPE      0
 #define USE_BORDER_STITCH  1
+#define USE_BORDER_DERIV   1
 
 /* Hardcoded path parameters for now */
 /* The influence is the distance from the path that the gradient constraint holds */
@@ -375,11 +376,14 @@ static void flag_borders(unsigned int size, Vertex* data, ModData* mod)
 			/* Handle corners */
 			if(c != 0 && r != 0)
 			{
+				/* Index into the current vertex data */
 				unsigned int id =
 					(c == -1 && r == -1) ? 0 :
 					(c == -1 && r ==  1) ? size-1 :
 					(c ==  1 && r == -1) ? (size-1) * size :
 					size * size - 1;
+
+				/* Index into the neighboring's vertex data */
 				unsigned int ih =
 					(c == -1 && r == -1) ? size * size - 1 :
 					(c == -1 && r ==  1) ? (size-1) * size :
@@ -393,11 +397,14 @@ static void flag_borders(unsigned int size, Vertex* data, ModData* mod)
 			/* Handle edges */
 			else for(i = 0; i < size; ++i)
 			{
+				/* Index into the current vertex data */
 				unsigned int id =
 					(c == -1) ? i :
 					(c ==  1) ? (size-1) * size + i :
 					(r == -1) ? i * size :
 					i * size + (size-1);
+
+				/* Index into the neighboring's vertex data */
 				unsigned int ih =
 					(c == -1) ? (size-1) * size + i :
 					(c ==  1) ? i :
@@ -406,6 +413,32 @@ static void flag_borders(unsigned int size, Vertex* data, ModData* mod)
 
 				data[id].flags |= POSITION;
 				data[id].c[1] = hdata[ih].h;
+
+				if(USE_BORDER_DERIV)
+				{
+					/* Offset to get the vertex next to the border */
+					/* Used to match the first derivative at the border */
+					int io =
+						(c == -1) ? (int)size :
+						(c ==  1) ? -(int)size :
+						(r == -1) ? 1 : -1;
+
+					/* If the next vertex was already set, take the average */
+					int second = data[id+io].c[1] != 0.0f;
+
+					/* Now set the next vertex so the derivative is kept */
+					/* Well actually we take the average of its original position and the new one */
+					/* Its original position being the relative height to the border */
+					/* The new position being the new height based on derivative */
+					/* I don't know why this is just an experiment */
+					/* TODO: validate this in any way possible... */
+					data[id+io].flags |= POSITION;
+					data[id+io].c[1] += hdata[ih].h +
+						.5f * ((hdata[ih].h - hdata[ih-io].h) + (data[id+io].h - data[id].h));
+
+					/* So yeah that average */
+					if(second) data[id+io].c[1] *= .5f;
+				}
 			}
 		}
 }

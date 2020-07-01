@@ -73,9 +73,12 @@ def EMD(pathGen):
     # Define the objective
     obj = gp.quicksum(flow[i,j] * dist[i,j] for i,j in dist.keys())
     if pathGen:
-        # TODO: fix this absolute term
-        obj = gp.QuadExpr(obj)
-        obj.add(gp.abs_(sum(L) - H.sum('*')), sigma)
+        # Add slack variables Sp and Sn to be able to take the absolute value |L-H|
+        Sp = m.addVar(lb=0.0, vtype=GRB.CONTINUOUS)
+        Sn = m.addVar(lb=0.0, vtype=GRB.CONTINUOUS)
+        obj.add(Sp + Sn, sigma)
+        m.addConstr(H.sum('*') - sum(L) <= Sp, name="Sp")
+        m.addConstr(sum(L) - H.sum('*') <= Sn, name="Sn")
 
     m.setObjective(obj, GRB.MINIMIZE)
 
@@ -94,6 +97,7 @@ def EMD(pathGen):
 
     # Minimum flow
     if pathGen:
+        # TODO: Apparently a general expression can only be equal to a single var
         m.addConstr(flow.sum('*','*') == gp.min_(sum(L), H.sum('*')), "minflow")
     else:
         m.addConstr(flow.sum('*','*') == min(sum(L), sum(H)), "minflow")
@@ -107,7 +111,9 @@ def EMD(pathGen):
         Flow = sum(m.getAttr('x', flow).values())
         print("-- Cost = %g" % Cost)
         print("-- Flow = %g" % Flow)
-        print("-- EMD = %g" % (Cost/Flow))
+
+        if not pathGen:
+            print("-- EMD = %g" % (Cost/Flow))
 
 
 # Entry point, more or less

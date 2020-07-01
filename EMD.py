@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
-from ortools.linear_solver import pywraplp
+import gurobipy as gp
 import json
 import math
+from gurobipy import GRB
 
 # Hardcoded input files for now
 L_FILE = 'terrain_L.json'
 H_FILE = 'terrain_H.json'
-
-# T_SIZE would be the width and height of the terrains
-# T_SCALE would be the distance between two adjacent vertices
-T_SIZE = 5;
-T_SCALE = (129-1)/(T_SIZE-1); # See the C project for this rule
 
 
 # Reads a terrain from filename into a list
@@ -21,83 +17,69 @@ def readTerrain(filename):
     return terr
 
 
+# Builds a cost dictionary
+def buildCost(size, scale):
+    cost = {}
+    for ic in range(0,size):
+        for ir in range(0,size):
+            for jc in range(0,size):
+                for jr in range(0,size):
+                    hypot = math.sqrt((ic-jc)*(ic-jc) + (ir-jr)*(ir-jr))
+                    cost[(ic*size+ir, jc*size+jr)] = hypot * scale
+
+    return cost
+
+
 # Implementation of the EMD problem, taking input from files
 def EMD():
     # Read terrain
     L = readTerrain(L_FILE)
     H = readTerrain(H_FILE)
 
-    # Create a LP solver
-    solver = pywraplp.Solver('EMD', pywraplp.Solver.GLOP_LINEAR_PROGRAMMING)
-    objective = solver.Objective()
+    if len(L) != len(H):
+        print("-- Input and output terrain are not of the same dimensions.")
+        return
 
-    # Define the flow matrix we want to find and its objective
-    # Yes this is a 4-dimensional list
-    F = [[[[0] * T_SIZE] * T_SIZE] * T_SIZE] * T_SIZE
-    for ic in range(0, T_SIZE):
-        for ir in range(0, T_SIZE):
-            for jc in range(0, T_SIZE):
-                for jr in range(0, T_SIZE):
-                    name = 'F_'+str(ic)+'_'+str(ir)+'_'+str(jc)+'_'+str(jr)
-                    F[ic][ir][jc][jr] = solver.NumVar(0.0, solver.infinity(), name)
+    # size would be the width and height of the terrain
+    # scale would be the distance between two adjacent vertices
+    size = len(L)
+    scale = (129-1)/(size-1) # See the C project for this rule
 
-                    # They also contribute to the objective
-                    dist = math.sqrt((ic-jc)*(ic-jc) + (ir-jr)*(ir-jr)) * T_SCALE
-                    objective.SetCoefficient(F[ic][ir][jc][jr], dist)
+    # First flatten the data and get the cost dict
+    L = [item for sublist in L for item in sublist]
+    H = [item for sublist in H for item in sublist]
+    cost = buildCost(size, scale)
 
-    objective.SetMinimization()
+    # Create a new model
+    m = gp.Model("EMD")
 
-    # Define the outgoing and ingoing flow constraints
-    cOuts = [[0] * T_SIZE] * T_SIZE
-    cIns = [[0] * T_SIZE] * T_SIZE
-    for ic in range(0, T_SIZE):
-        for ir in range(0, T_SIZE):
-            cOuts[ic][ir] = solver.Constraint(-solver.infinity(), L[ic][ir])
-            cIns[ic][ir] = solver.Constraint(-solver.infinity(), H[ic][ir])
+    # Add flow variables
+    flow = m.addVars(cost.keys(), obj=cost, vtype=GRB.CONTINUOUS, name="flow")
 
-            for jc in range(0, T_SIZE):
-                for jr in range(0, T_SIZE):
-                    cOuts[ic][ir].SetCoefficient(F[ic][ir][jc][jr], 1)
-                    cIns[ic][ir].SetCoefficient(F[jc][jr][ic][ir], 1)
+    # Flow direction constraint
+    m.addConstrs((flow[i,j] >= 0 for i,j in cost.keys()), "flowdir")
+    #for i,j in cost.keys():
+    #    m.addConstr(flow[i,j] >= 0, "flow[%s, %s]" % (i,j))
 
-    # Define the total flow constraint
-    Ltot = sum(sum(L, []))
-    Htot = sum(sum(H, []))
-    Tflow = min(Ltot, Htot)
-    cFlow = solver.Constraint(Tflow, Tflow)
+    # Maximum flow
+    m.addConstrs((flow.sum(i,'*') <= L[i] for i in range(0,len(L))), "flowout")
+    m.addConstrs((flow.sum('*',j) <= H[j] for j in range(0,len(H))), "flowin")
+    #for i in range(0,len(L)):
+    #    m.addConstr((sum(flow[i,j] for j in range(0,len(H))) <= L[i]), "flowout[%s]" % i)
+    #for j in range(0,len(H)):
+    #    m.addConstr((sum(flow[i,j] for i in range(0,len(L))) <= H[j]), "flowin[%s]" % j)
 
-    for ic in range(0, T_SIZE):
-        for ir in range(0, T_SIZE):
-            for jc in range(0, T_SIZE):
-                for jr in range(0, T_SIZE):
-                    cFlow.SetCoefficient(F[ic][ir][jc][jr], 1)
+    # Minimum flow
+    m.addConstr(flow.sum('*','*') == min(sum(L), sum(H)), "minflow")
 
-    # Solve dat problem
-    status = solver.Solve()
-    print('-- Number of variables =', solver.NumVariables())
-    print('-- Number of constraints =', solver.NumConstraints())
+    # Compute optimal solution
+    m.optimize()
 
-    # Calculate the EMD
-    if status == solver.OPTIMAL:
-        cost = 0.0
-        flow = 0.0
-        for ic in range(0, T_SIZE):
-            for ir in range(0, T_SIZE):
-                for jc in range(0, T_SIZE):
-                    for jr in range(0, T_SIZE):
-                        dist = math.sqrt((ic-jc)*(ic-jc) + (ir-jr)*(ir-jr)) * T_SCALE
-                        cost += F[ic][ir][jc][jr].solution_value() * dist
-                        flow += F[ic][ir][jc][jr].solution_value()
-
-        print('-- Cost =', cost)
-        print('-- Flow =', flow)
-
-    # No optimal solution
-    else:
-        if status == solver.FEASIBLE:
-            print('-- A potentially suboptimal solution was found.')
-        else:
-            print('-- The solver could not solve the problem.')
+    # Print solution
+    if m.status == GRB.OPTIMAL:
+        solution = m.getAttr('x', flow)
+        for i,j in cost.keys():
+            print("%s -> %s: %g" % (i,j, solution[i,j]))
 
 
 # Entry point, more or less

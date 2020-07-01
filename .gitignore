@@ -9,6 +9,7 @@
 *.fuse_hidden*
 *.json
 *.layout
+*.log
 *.npp
 *.suo
 *.supp

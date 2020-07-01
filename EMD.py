@@ -98,7 +98,10 @@ def EMD(pathGen):
     # Minimum flow
     if pathGen:
         # TODO: Apparently a general expression can only be equal to a single var
-        m.addConstr(flow.sum('*','*') == gp.min_(sum(L), H.sum('*')), "minflow")
+        # So at this point no creation/destruction is allowed"
+        #m.addConstr(flow.sum('*','*') == gp.min_(sum(L), H.sum('*')), "minflow")
+        m.addConstr(flow.sum('*','*') == sum(L), "totflowout")
+        #m.addConstr(flow.sum('*','*') <= H.sum('*'), "totflowin")
     else:
         m.addConstr(flow.sum('*','*') == min(sum(L), sum(H)), "minflow")
 
@@ -109,11 +112,13 @@ def EMD(pathGen):
     if m.status == GRB.OPTIMAL:
         Cost = m.getAttr("ObjVal")
         Flow = sum(m.getAttr('x', flow).values())
-        print("-- Cost = %g" % Cost)
-        print("-- Flow = %g" % Flow)
+        print("-- Cost =", Cost)
+        print("-- Flow =", Flow)
 
         if not pathGen:
-            print("-- EMD = %g" % (Cost/Flow))
+            print("-- EMD =", (Cost/Flow))
+        else:
+            print("-- H =", m.getAttr('x', H).values())
 
 
 # Entry point, more or less

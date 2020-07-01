@@ -102,10 +102,12 @@ def EMD(pathGen):
     m.optimize()
 
     # Print solution
-    #if m.status == GRB.OPTIMAL:
-    #    solution = m.getAttr('x', flow)
-    #    for i,j in dist.keys():
-    #        print("%s -> %s: %g" % (i,j, solution[i,j]))
+    if m.status == GRB.OPTIMAL:
+        Cost = m.getAttr("ObjVal")
+        Flow = sum(m.getAttr('x', flow).values())
+        print("-- Cost = %g" % Cost)
+        print("-- Flow = %g" % Flow)
+        print("-- EMD = %g" % (Cost/Flow))
 
 
 # Entry point, more or less

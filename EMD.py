@@ -84,24 +84,22 @@ def EMD(pathGen):
 
     # Flow direction constraint
     m.addConstrs((flow[i,j] >= 0 for i,j in dist.keys()), "flowdir")
-    #for i,j in dist.keys():
-    #    m.addConstr(flow[i,j] >= 0, "flow[%s, %s]" % (i,j))
 
     # Maximum flow
     m.addConstrs((flow.sum(i,'*') <= L[i] for i in ran), "flowout")
-    m.addConstrs((flow.sum('*',j) <= H[j] for j in ran), "flowin")
-    #for i in range(0,len(L)):
-    #    m.addConstr((sum(flow[i,j] for j in ran) <= L[i]), "flowout[%s]" % i)
-    #for j in range(0,len(H)):
-    #    m.addConstr((sum(flow[i,j] for i in ran) <= H[j]), "flowin[%s]" % j)
+    if pathGen:
+        # If we're generating, this is == instead of <=
+        # This because H is unkown yet, we're setting it instead of comparing against it
+        m.addConstrs((flow.sum('*',j) == H[j] for j in ran), "flowin")
+    else:
+        m.addConstrs((flow.sum('*',j) <= H[j] for j in ran), "flowin")
 
     # Minimum flow
     if pathGen:
-        # TODO: Apparently a general expression can only be equal to a single var
-        # So at this point no creation/destruction is allowed"
-        #m.addConstr(flow.sum('*','*') == gp.min_(sum(L), H.sum('*')), "minflow")
-        m.addConstr(flow.sum('*','*') == sum(L), "totflowout")
-        #m.addConstr(flow.sum('*','*') <= H.sum('*'), "totflowin")
+        # So if we're generating, instead of min(L,H), we do <= L and <= H
+        # Because the above constraint is changed as well this works
+        m.addConstr(flow.sum('*','*') <= sum(L), "totflowout")
+        m.addConstr(flow.sum('*','*') <= H.sum('*'), "totflowin")
     else:
         m.addConstr(flow.sum('*','*') == min(sum(L), sum(H)), "minflow")
 

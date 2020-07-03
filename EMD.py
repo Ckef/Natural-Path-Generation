@@ -4,10 +4,13 @@ import json
 import math
 import sys
 from gurobipy import GRB
+from itertools import chain
 
 # Hardcoded input files for now
-L_FILE = 'terrain_L.json'
-H_FILE = 'terrain_H.json'
+L_FILE         = 'terrain_L.json'
+L_FLAGS_FILE   = 'terrain_out_f.json'
+L_CONSTRS_FILE = 'terrain_out_c.json'
+H_FILE         = 'terrain_H.json'
 
 
 # Reads a terrain from filename into a list
@@ -37,6 +40,8 @@ def buildDist(size, scale):
 def EMD(pathGen):
     # Read terrain
     L = readTerrain(L_FILE)
+    L_flags = readTerrain(L_FLAGS_FILE)
+    L_constrs = readTerrain(L_CONSTRS_FILE)
     H = []
 
     if not pathGen:
@@ -50,13 +55,15 @@ def EMD(pathGen):
     sigma = (size-1)*2
 
     # First flatten the data and get the distance dict
-    L = [item for sublist in L for item in sublist]
+    L = list(chain.from_iterable(L))
+    L_flags = list(chain.from_iterable(L_flags))
+    L_constrs = list(chain.from_iterable(L_constrs))
     if not pathGen:
-        H = [item for sublist in H for item in sublist]
+        H = list(chain.from_iterable(H))
 
         # Check dimensions
         if len(L) != len(H):
-            print("-- Input and output terrain are not of the same dimensions.")
+            print("-- Input and output terrains are not of the same dimensions.")
             return
 
     ran = range(0,len(L))
@@ -90,6 +97,7 @@ def EMD(pathGen):
     if pathGen:
         # If we're generating, this is == instead of <=
         # This because H is unkown yet, we're setting it instead of comparing against it
+        # TODO: However this does not allow for creation of material anymore...
         m.addConstrs((flow.sum('*',j) == H[j] for j in ran), "flowin")
     else:
         m.addConstrs((flow.sum('*',j) <= H[j] for j in ran), "flowin")

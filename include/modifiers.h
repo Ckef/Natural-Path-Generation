@@ -15,6 +15,16 @@ int mod_stats(unsigned int size, Vertex* data, ModData* mod);
 int mod_output(unsigned int size, Vertex* data, ModData* mod);
 
 /**
+ * Outputs the terrain's flags to an output .json file.
+ */
+int mod_output_flags(unsigned int size, Vertex* data, ModData* mod);
+
+/**
+ * Outputs the constraint values to an output .json file.
+ */
+int mod_output_constrs(unsigned int size, Vertex* data, ModData* mod);
+
+/**
  * Makes a subdivision of the terrain.
  * Each region has its own constraints (i.e. flags).
  */

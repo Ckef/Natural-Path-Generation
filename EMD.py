@@ -34,31 +34,72 @@ def buildDist(size, scale):
     return dist
 
 # Builds dictionaries for all constraints
+# If no constraint data is present, it just returns nothing
 def buildConstrs(size, L_flags, L_constrs):
-    # If no constraint data is present, just return nothing
     if len(L_flags) == 0 or len(L_constrs) == 0:
-        return ({}, {}, {}, {})
+        return (None, None, None, None)
 
-    sDict = {}
-    dDict = {}
-    rDict = {}
+    # For gradient and directional derivative, we have 4 directions
+    # For roughness, we have 4 corners, 4 edges and the center
+    # The position constraint is the same everywhere
+    sDicts = ({}, {}, {}, {})
+    dDicts = ({}, {}, {}, {})
+    rDicts = ({}, {}, {}, {}, {}, {}, {}, {}, {})
     pDict = {}
+
     for ic in range(0,size):
         for ir in range(0,size):
+            ind = ic * size + ir
+            constrs = L_constrs[ic][ir]
+
             # Gradient constraint
             if L_flags[ic][ir] & 0b0001:
-                sDict[ic*size+ir] = L_constrs[ic][ir][0]
+                if ic < size-1 and ir < size-1:     # Upper right quadrant
+                    sDicts[0][ind] = constrs[0]
+                if ic < size-1 and ir > 0:          # Lower right quadrant
+                    sDicts[1][ind] = constrs[0]
+                if ic > 0 and ir > 0:               # Lower left quadrant
+                    sDicts[2][ind] = constrs[0]
+                if ic > 0 and ir < size-1:          # Upper left quadrant
+                    sDicts[3][ind] = constrs[0]
+
             # Directional derivative constraint
             if L_flags[ic][ir] & 0b0010:
-                dDict[ic*size+ir] = (L_constrs[ic][ir][0], L_constrs[ic][ir][1])
+                if ic < size-1 and ir < size-1:     # Upper right quadrant
+                    dDicts[0][ind] = (constrs[0], constrs[1])
+                if ic < size-1 and ir > 0:          # Lower right quadrant
+                    dDicts[1][ind] = (constrs[0], constrs[1])
+                if ic > 0 and ir > 0:               # Lower left quadrant
+                    dDicts[2][ind] = (constrs[0], constrs[1])
+                if ic > 0 and ir < size-1:          # Upper left quadrant
+                    dDicts[3][ind] = (constrs[0], constrs[1])
+
             # Roughness constraint
             if L_flags[ic][ir] & 0b0100:
-                rDict[ic*size+ir] = L_constrs[ic][ir][0]
+                if ic == 0 and ir == 0:             # Lower left corner
+                    rDicts[0][ind] = constrs[0]
+                elif ic == 0 and ir == size-1:      # Upper left corner
+                    rDicts[1][ind] = constrs[0]
+                elif ic == size-1 and ir == size-1: # Upper right corner
+                    rDicts[2][ind] = constrs[0]
+                elif ic == size-1 and ir == 0:      # Lower right corner
+                    rDicts[3][ind] = constrs[0]
+                elif ic == 0:                       # Left edge
+                    rDicts[4][ind] = constrs[0]
+                elif ir == size-1:                  # Upper edge
+                    rDicts[5][ind] = constrs[0]
+                elif ic == size-1:                  # Right edge
+                    rDicts[6][ind] = constrs[0]
+                elif ir == 0:                       # Lower edge
+                    rDicts[7][ind] = constrs[0]
+                else:                               # Middle
+                    rDicts[8][ind] = constrs[0]
+
             # Position constraint
             if L_flags[ic][ir] & 0b1000:
-                pDict[ic*size+ir] = L_constrs[ic][ir][2]
+                pDict[ind] = constrs[2]
 
-    return (sDict, dDict, rDict, pDict)
+    return (sDicts, dDicts, rDicts, pDict)
 
 
 # Implementation of the EMD problem, taking input from files
@@ -100,7 +141,7 @@ def EMD(pathGen):
 
     ran = range(0,len(L))
     dist = buildDist(size, scale)
-    sDict, dDict, rDict, pDict = buildConstrs(size, L_flags, L_constrs)
+    sDicts, dDicts, rDicts, pDict = buildConstrs(size, L_flags, L_constrs)
 
     # Create a new model
     m = gp.Model("EMD")

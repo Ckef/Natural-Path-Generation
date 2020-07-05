@@ -23,7 +23,7 @@ static void print_flags(FILE* f, int comma, Vertex* v)
 /*****************************/
 static void print_constrs(FILE* f, int comma, Vertex* v)
 {
-	fprintf(f, !comma ? "[%f,%f] " : "[%f,%f], ", v->c[0], v->c[1]);
+	fprintf(f, !comma ? "[%f,%f,%f] " : "[%f,%f,%f], ", v->c[0], v->c[1], v->c[2]);
 }
 
 /*****************************/

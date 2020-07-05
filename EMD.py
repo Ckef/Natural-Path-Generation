@@ -50,13 +50,13 @@ def buildConstrs(size, L_flags, L_constrs):
                 sDict[ic*size+ir] = L_constrs[ic][ir][0]
             # Directional derivative constraint
             if L_flags[ic][ir] & 0b0010:
-                dDict[ic*size+ir] = L_constrs[ic][ir]
+                dDict[ic*size+ir] = (L_constrs[ic][ir][0], L_constrs[ic][ir][1])
             # Roughness constraint
             if L_flags[ic][ir] & 0b0100:
                 rDict[ic*size+ir] = L_constrs[ic][ir][0]
             # Position constraint
             if L_flags[ic][ir] & 0b1000:
-                pDict[ic*size+ir] = L_constrs[ic][ir][1]
+                pDict[ic*size+ir] = L_constrs[ic][ir][2]
 
     return (sDict, dDict, rDict, pDict)
 

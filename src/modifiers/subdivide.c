@@ -398,7 +398,7 @@ static void flag_borders(unsigned int size, Vertex* data, ModData* mod)
 					0;
 
 				data[id].flags |= POSITION;
-				data[id].c[1] = hdata[ih].h;
+				data[id].c[2] = hdata[ih].h;
 			}
 
 			/* Handle edges */
@@ -419,7 +419,7 @@ static void flag_borders(unsigned int size, Vertex* data, ModData* mod)
 					i * size;
 
 				data[id].flags |= POSITION;
-				data[id].c[1] = hdata[ih].h;
+				data[id].c[2] = hdata[ih].h;
 
 				if(USE_BORDER_DERIV)
 				{
@@ -431,7 +431,7 @@ static void flag_borders(unsigned int size, Vertex* data, ModData* mod)
 						(r == -1) ? 1 : -1;
 
 					/* If the next vertex was already set, take the average */
-					int second = data[id+io].c[1] != 0.0f;
+					int second = data[id+io].flags & POSITION;
 
 					/* Now set the next vertex so the derivative is kept */
 					/* Well actually we take the average of its original position and the new one */
@@ -440,11 +440,11 @@ static void flag_borders(unsigned int size, Vertex* data, ModData* mod)
 					/* I don't know why this is just an experiment */
 					/* TODO: validate this in any way possible... */
 					data[id+io].flags |= POSITION;
-					data[id+io].c[1] += hdata[ih].h +
+					data[id+io].c[2] += hdata[ih].h +
 						.5f * ((hdata[ih].h - hdata[ih-io].h) + (data[id+io].h - data[id].h));
 
 					/* So yeah that average */
-					if(second) data[id+io].c[1] *= .5f;
+					if(second) data[id+io].c[2] *= .5f;
 				}
 			}
 		}

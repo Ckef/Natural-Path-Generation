@@ -29,7 +29,7 @@ typedef enum
 typedef struct
 {
 	float h;
-	float c[2]; /* Constraint values */
+	float c[3]; /* Constraint values */
 	int flags;  /* See type VertexFlag */
 
 } Vertex;

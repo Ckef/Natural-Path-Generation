@@ -367,8 +367,8 @@ int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 		for(ix = 0; ix < size*size; ++ix)
 			if(inp[ix].flags & POSITION)
 			{
-				done &= (data[ix].h == inp[ix].c[1]);
-				data[ix].h = inp[ix].c[1];
+				done &= (data[ix].h == inp[ix].c[2]);
+				data[ix].h = inp[ix].c[2];
 			}
 
 		/* Exit if no changes were made */

@@ -12,6 +12,11 @@ L_FLAGS_FILE   = 'terrain_out_f.json'
 L_CONSTRS_FILE = 'terrain_out_c.json'
 H_FILE         = 'terrain_H.json'
 
+# Also hardcoded slope constraints
+# See C-project, cannot deviate! ...
+MAX_SLOPE         = 0.0025
+MAX_SLOPE_FALLOFF = 0.05
+
 
 # Reads a terrain from filename into a list
 def readTerrain(filename):
@@ -33,6 +38,33 @@ def buildDist(size, scale):
 
     return dist
 
+# Builds dictionaries for all constraints
+def buildConstrs(size, L_flags, L_constrs):
+    # If no constraint data is present, just return nothing
+    if len(L_flags) == 0 or len(L_constrs) == 0:
+        return ({}, {}, {}, {})
+
+    sDict = {}
+    dDict = {}
+    rDict = {}
+    pDict = {}
+    for ic in range(0,size):
+        for ir in range(0,size):
+            # Gradient constraint
+            if L_flags[ic][ir] & 0b0001:
+                sDict[ic*size+ir] = MAX_SLOPE
+            # Directional derivative constraint
+            if L_flags[ic][ir] & 0b0010:
+                dDict[ic*size+ir] = L_constrs[ic][ir]
+            # Roughness constraint
+            if L_flags[ic][ir] & 0b0100:
+                rDict[ic*size+ir] = L_constrs[ic][ir][0]
+            # Position constraint
+            if L_flags[ic][ir] & 0b1000:
+                pDict[ic*size+ir] = L_constrs[ic][ir][1]
+
+    return (sDict, dDict, rDict, pDict)
+
 
 # Implementation of the EMD problem, taking input from files
 # set pathGen to False if you just want to calculate the EMD
@@ -40,12 +72,15 @@ def buildDist(size, scale):
 def EMD(pathGen):
     # Read terrain
     L = readTerrain(L_FILE)
-    L_flags = readTerrain(L_FLAGS_FILE)
-    L_constrs = readTerrain(L_CONSTRS_FILE)
+    L_flags = []
+    L_constrs = []
     H = []
 
     if not pathGen:
         H = readTerrain(H_FILE)
+    else:
+        L_flags = readTerrain(L_FLAGS_FILE)
+        L_constrs = readTerrain(L_CONSTRS_FILE)
 
     # size would be the width and height of the terrain
     # scale would be the distance between two adjacent vertices
@@ -54,10 +89,8 @@ def EMD(pathGen):
     scale = (129-1)/(size-1) # See the C project for this rule
     sigma = (size-1)*2
 
-    # First flatten the data and get the distance dict
+    # First flatten the data and build all dictionaries
     L = list(chain.from_iterable(L))
-    L_flags = list(chain.from_iterable(L_flags))
-    L_constrs = list(chain.from_iterable(L_constrs))
     if not pathGen:
         H = list(chain.from_iterable(H))
 
@@ -65,9 +98,14 @@ def EMD(pathGen):
         if len(L) != len(H):
             print("-- Input and output terrains are not of the same dimensions.")
             return
+    else:
+        if len(L_flags) != size or len(L_constrs) != size:
+            print("-- Flag or constraint files are not of the correct dimensions.")
+            return
 
     ran = range(0,len(L))
     dist = buildDist(size, scale)
+    sDict, dDict, rDict, pDict = buildConstrs(size, L_flags, L_constrs)
 
     # Create a new model
     m = gp.Model("EMD")
@@ -120,10 +158,8 @@ def EMD(pathGen):
         Flow = sum(m.getAttr('x', flow).values())
         print("-- Cost =", Cost)
         print("-- Flow =", Flow)
-
-        if not pathGen:
-            print("-- EMD =", (Cost/Flow))
-        else:
+        print("-- EMD =", Cost/Flow)
+        if pathGen:
             print("-- H =", m.getAttr('x', H).values())
 
 

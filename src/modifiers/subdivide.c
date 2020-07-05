@@ -9,15 +9,18 @@
 /* Non-zero if we want to use the direction derivative, border, and border derivative constraints */
 #define USE_DIR_SLOPE      0
 #define USE_BORDER_STITCH  1
-#define USE_BORDER_DERIV   1
+#define USE_BORDER_DERIV   0
 
 /* Hardcoded path parameters for now */
+/* The falloff is the ascend in the maximum slope the farther you get from the path boundary */
 /* The influence is the distance from the path that the gradient constraint holds */
 /* Maximum gradient ascends along the distance RADIUS + INFLUENCE */
-#define PATH_RADIUS     2.2f
-#define PATH_INFLUENCE  10.0f
-#define COST_LIN        10000
-#define COST_POW        1.8f
+#define MAX_SLOPE          0.0025f
+#define MAX_SLOPE_FALLOFF  0.05f
+#define PATH_RADIUS        2.2f
+#define PATH_INFLUENCE     10.0f
+#define COST_LIN           10000
+#define COST_POW           1.8f
 
 /* Some macros to make A* a bit easier */
 /* Firstly accessing data of a node */
@@ -135,35 +138,39 @@ static void flag_ellipse(
 			/* Now check if it's inside our first ellipse */
 			float d = (c*(float)c) / (rx*rx) + (r*(float)r) / (ry*ry);
 			if(d <= 1)
+			{
+				data[i].c[0] = MAX_SLOPE;
 				data[i].flags = SLOPE;
+			}
 
+			/* If not, it might be in our second ellipse */
 			else if(USE_DIR_SLOPE)
 			{
-				/* If not, it might be in our second ellipse */
 				d = (c*(float)c) / (rx2*rx2) + (r*(float)r) / (ry2*ry2);
-				if(d <= 1)
+				if(d > 1)
+					continue;
+
+				/* Calculate the vector to the first ellipse */
+				float tx, ty;
+				find_ellipse_intersect(rx, ry, c, r, &tx, &ty);
+
+				/* Normalize it to [0,1] */
+				tx = (c - tx) / border;
+				ty = (r - ty) / border;
+
+				/* Calculate the maximum slope */
+				/* The linear falloff is scaled by dist^0.5 */
+				/* So it's not really linear anymore, otherwise it looks stupid... */
+				float dist = hypotf(tx, ty);
+				float nMaxSlope = MAX_SLOPE + MAX_SLOPE_FALLOFF * powf(dist, .5f);
+				float cMaxSlope = hypotf(data[i].c[0], data[i].c[1]);
+
+				/* If the slope is smaller than what is already stored, replace */
+				/* This so use the smallest distance to the path */
+				if(!(data[i].flags & DIR_SLOPE) || nMaxSlope < cMaxSlope)
 				{
-					/* Calculate the vector to the first ellipse */
-					float tx, ty;
-					find_ellipse_intersect(rx, ry, c, r, &tx, &ty);
-
-					/* Normalize it to [0,1] */
-					tx = (c - tx) / border;
-					ty = (r - ty) / border;
-
-					/* If the distance is smaller than what is already stored, replace */
-					/* This so we have the smallest distance to the path */
-					float dNew = tx*tx + ty*ty;
-					float dCur =
-						data[i].c[0]*data[i].c[0] +
-						data[i].c[1]*data[i].c[1];
-
-					if(!(data[i].flags & DIR_SLOPE) || dNew < dCur)
-					{
-						data[i].c[0] = tx;
-						data[i].c[1] = ty;
-					}
-
+					data[i].c[0] = tx / dist * nMaxSlope;
+					data[i].c[1] = ty / dist * nMaxSlope;
 					data[i].flags = DIR_SLOPE;
 				}
 			}

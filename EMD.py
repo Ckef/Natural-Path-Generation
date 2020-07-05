@@ -12,11 +12,6 @@ L_FLAGS_FILE   = 'terrain_out_f.json'
 L_CONSTRS_FILE = 'terrain_out_c.json'
 H_FILE         = 'terrain_H.json'
 
-# Also hardcoded slope constraints
-# See C-project, cannot deviate! ...
-MAX_SLOPE         = 0.0025
-MAX_SLOPE_FALLOFF = 0.05
-
 
 # Reads a terrain from filename into a list
 def readTerrain(filename):
@@ -52,7 +47,7 @@ def buildConstrs(size, L_flags, L_constrs):
         for ir in range(0,size):
             # Gradient constraint
             if L_flags[ic][ir] & 0b0001:
-                sDict[ic*size+ir] = MAX_SLOPE
+                sDict[ic*size+ir] = L_constrs[ic][ir][0]
             # Directional derivative constraint
             if L_flags[ic][ir] & 0b0010:
                 dDict[ic*size+ir] = L_constrs[ic][ir]

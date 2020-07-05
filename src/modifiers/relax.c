@@ -6,10 +6,7 @@
 #include <math.h>
 #include <string.h>
 
-/* Hardcoded slope constraint for now */
-/* The falloff is the increase in the max slope the farthest from the path boundary */
-#define MAX_SLOPE          0.0025f
-#define MAX_SLOPE_FALLOFF  0.05f
+/* Hardcoded thresholds for now */
 #define S_THRESHOLD        0.00001f /* Convergence threshold of slope error */
 #define R_THRESHOLD        0.04f /* Convergence threshold of roughness error */
 #define MAX_ITERATIONS     10000
@@ -94,9 +91,9 @@ static int relax_slope(
 
 		/* And add the oh so familiar convergence threshold to the comparison */
 		/* Again for floating point errors */
-		if(g > MAX_SLOPE + S_THRESHOLD)
+		if(g > inp[ix].c[0] + S_THRESHOLD)
 		{
-			g = MAX_SLOPE / g;
+			g = inp[ix].c[0] / g;
 			move_slope(sx, scale, out + ix, out + ixx, fabs(sx) * g, weight);
 			move_slope(sy, scale, out + ix, out + ixy, fabs(sy) * g, weight);
 
@@ -128,15 +125,10 @@ static int relax_dir_slope(
 		if(!get_neighbours(size, ix, d, &ixx, &ixy))
 			continue;
 
-		/* First consider the falloff for the maximum slope */
-		/* The linear falloff is scaled by dist^0.5 */
-		/* So it's not really linear anymore, otherwise it looks stupid... */
-		float fall = hypotf(inp[ix].c[0], inp[ix].c[1]);
-		float maxSlope = MAX_SLOPE + MAX_SLOPE_FALLOFF * powf(fall, .5f);
-
 		/* This scales directional derivative d by MaxSlope/d */
-		float dx = inp[ix].c[0] / fall;
-		float dy = inp[ix].c[1] / fall;
+		float maxSlope = hypotf(inp[ix].c[0], inp[ix].c[1]);
+		float dx = inp[ix].c[0] / maxSlope;
+		float dy = inp[ix].c[1] / maxSlope;
 		float sx = (inp[ixx].h - inp[ix].h) / scale;
 		float sy = (inp[ixy].h - inp[ix].h) / scale;
 		float d = fabs(sx * dx + sy * dy);
@@ -280,14 +272,15 @@ int mod_relax_slope_1d(unsigned int size, Vertex* data, ModData* mod)
 		for(r = 0; r < size-1; ++r)
 		{
 			float s = (mid[r+1].h - mid[r].h) / scale;
+			float maxSlope = 0.0025f;
 
 			/* Add the convergence threshold to the comparison */
 			/* If we do not, it may never exit due to floating point errors */
 			/* We could calculate the error that could accumulate, but this is hard */
 			/* So we have this hardcoded threshold :) */
-			if(fabs(s) > MAX_SLOPE + S_THRESHOLD)
+			if(fabs(s) > maxSlope + S_THRESHOLD)
 			{
-				move_slope(s, scale, mid + r, mid + (r+1), MAX_SLOPE, 1);
+				move_slope(s, scale, mid + r, mid + (r+1), maxSlope, 1);
 
 				/* Modification applied, indiciate we are not done yet */
 				done = 0;

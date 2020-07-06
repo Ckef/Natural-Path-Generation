@@ -6,8 +6,13 @@
 #include <math.h>
 #include <stdlib.h>
 
-/* Non-zero if we want to use the direction derivative, border, and border derivative constraints */
+/* Non-zero if we want to use certain features */
+/* USE_DIR_SLOPE indicates to use directional derivative for path borders */
+/* USE_ROUGHNESS indicates to use roughness constraints */
+/* USE_BORDER_STITCH indicates to set position constraints at patch borders */
+/* USE_BORDER_DERIV extends the patch borders with derivative constraints (more position constraints) */
 #define USE_DIR_SLOPE      0
+#define USE_ROUGHNESS      1
 #define USE_BORDER_STITCH  1
 #define USE_BORDER_DERIV   0
 
@@ -453,10 +458,13 @@ static void flag_borders(unsigned int size, Vertex* data, ModData* mod)
 /*****************************/
 int mod_subdivide(unsigned int size, Vertex* data, ModData* mod)
 {
-	/* Let it rain roughness! */
-	unsigned int i;
-	for(i = 0; i < size*size; ++i)
-		data[i].flags = ROUGHNESS;
+	if(USE_ROUGHNESS)
+	{
+		/* Let it rain roughness! */
+		unsigned int i;
+		for(i = 0; i < size*size; ++i)
+			data[i].flags = ROUGHNESS;
+	}
 
 	/* Find a path from the lower left corner to the upper right corner */
 	ANode s = { .c = 0,      .r = 0      };
@@ -467,8 +475,8 @@ int mod_subdivide(unsigned int size, Vertex* data, ModData* mod)
 
 	/* Lastly, constrain the borders to match the neighbors */
 	/* It is important this is done last */
-	/* This because this constraint should be OR'd with the other constraints */
-	if(USE_BORDER_STITCH)
+	/* This because position constraints should be OR'd with the other constraints */
+	if(USE_ROUGHNESS && USE_BORDER_STITCH)
 		flag_borders(size, data, mod);
 
 	/* We don't need to iterate this modifier */

@@ -13,6 +13,7 @@ L_CONSTRS_FILE = 'terrain_out_c.json'
 H_FILE         = 'terrain_H.json'
 
 
+#######################
 # Reads a terrain from filename into a list
 def readTerrain(filename):
     f = open(filename)
@@ -21,6 +22,7 @@ def readTerrain(filename):
     return terr
 
 
+#######################
 # Builds a distance dictionary
 def buildDist(size, scale):
     dist = {}
@@ -28,11 +30,13 @@ def buildDist(size, scale):
         for ir in range(0,size):
             for jc in range(0,size):
                 for jr in range(0,size):
-                    hypot = math.sqrt((ic-jc)*(ic-jc) + (ir-jr)*(ir-jr))
+                    hypot = math.hypot(ic-jc, ir-jr)
                     dist[(ic*size+ir, jc*size+jr)] = hypot * scale
 
     return dist
 
+
+#######################
 # Builds dictionaries for all constraints
 # If no constraint data is present, it just returns nothing
 def buildConstrs(size, L_flags, L_constrs):
@@ -102,6 +106,7 @@ def buildConstrs(size, L_flags, L_constrs):
     return (sDicts, dDicts, rDicts, pDict)
 
 
+#######################
 # Implementation of the EMD problem, taking input from files
 # set pathGen to False if you just want to calculate the EMD
 # set pathGen to True to set the output as a decision variable too
@@ -143,8 +148,10 @@ def EMD(pathGen):
     dist = buildDist(size, scale)
     sDicts, dDicts, rDicts, pDict = buildConstrs(size, L_flags, L_constrs)
 
+    #######################
     # Create a new model
     m = gp.Model("EMD")
+    m.setParam("NonConvex", 2)
 
     # Add flow and output terrain H variables
     flow = m.addVars(dist.keys(), vtype=GRB.CONTINUOUS, name="flow")
@@ -160,9 +167,13 @@ def EMD(pathGen):
         obj.add(Sp + Sn, sigma)
         m.addConstr(H.sum('*') - sum(L) <= Sp, name="Sp")
         m.addConstr(sum(L) - H.sum('*') <= Sn, name="Sn")
+    else:
+        # Add the constant value anyway so we can compare the EMD values
+        obj.addConstant(sigma * abs(sum(L) - sum(H)))
 
     m.setObjective(obj, GRB.MINIMIZE)
 
+    #######################
     # Flow direction constraint
     m.addConstrs((flow[i,j] >= 0 for i,j in dist.keys()), "flowdir")
 
@@ -185,6 +196,100 @@ def EMD(pathGen):
     else:
         m.addConstr(flow.sum('*','*') == min(sum(L), sum(H)), "totflow")
 
+    #######################
+    # Now add the extra constraints on H
+    # This gives rise to the features we want in H
+    if pathGen:
+        SQR = lambda x : x*x
+        HYP = lambda x : math.hypot(x[0], x[1])
+        DIR = lambda x : (x[0]/HYP(x), x[1]/HYP(x))
+
+        # Gradient constraint
+        # Formulated as sqrt((y-x)^2/scale^2 + (z-x)^2/scale^2) <= g(x) for each quadrant
+        # where y and z are the two neighbors in the relevant quadrant
+        # can be written as:
+        # (y-x)^2 + (z-x)^2 <= scale^2 * g(x)^2
+        m.addConstrs(
+            (SQR(H[i+size]-H[i]) + SQR(H[i+1]-H[i])
+            <= SQR(scale*sDicts[0][i]) for i in sDicts[0].keys()), "gradient0")
+        m.addConstrs(
+            (SQR(H[i-1]-H[i]) + SQR(H[i+size]-H[i])
+            <= SQR(scale*sDicts[1][i]) for i in sDicts[1].keys()), "gradient1")
+        m.addConstrs(
+            (SQR(H[i-size]-H[i]) + SQR(H[i-1]-H[i])
+            <= SQR(scale*sDicts[2][i]) for i in sDicts[2].keys()), "gradient2")
+        m.addConstrs(
+            (SQR(H[i+1]-H[i]) + SQR(H[i-size]-H[i])
+            <= SQR(scale*sDicts[3][i]) for i in sDicts[3].keys()), "gradient3")
+
+        # Directional derivative constraint
+        # Formulated as |((y-x)/scale, (z-x)/scale) dot D(x)| <= d(x) for each quadrant
+        # where y and z are the two neighbors in the relevant quadrant and D(x) is the direction of x
+        # can be written as:
+        # |(y-x, z-x) dot D(x)| <= scale * d(x)
+        # Now we have an absolute value, so instead we write it as two constraints:
+        # (y-x, z-x) dot D(x) <= scale * d(x)
+        # (y-x, z-x) dot D(x) >= scale * -d(x)
+        deriv = lambda d,i : (H[i+size]-H[i])*DIR(dDicts[d][i])[0] + (H[i+1]-H[i])*DIR(dDicts[d][i])[1]
+        m.addConstrs((deriv(0,i) <= scale*HYP(dDicts[0][i]) for i in dDicts[0].keys()), "deriv0p")
+        m.addConstrs((deriv(0,i) >= -scale*HYP(dDicts[0][i]) for i in dDicts[0].keys()), "deriv0n")
+
+        deriv = lambda d,i : (H[i-1]-H[i])*DIR(dDicts[d][i])[0] + (H[i+size]-H[i])*DIR(dDicts[d][i])[1]
+        m.addConstrs((deriv(1,i) <= scale*HYP(dDicts[1][i]) for i in dDicts[1].keys()), "deriv1p")
+        m.addConstrs((deriv(1,i) >= -scale*HYP(dDicts[1][i]) for i in dDicts[1].keys()), "deriv1n")
+
+        deriv = lambda d,i : (H[i-size]-H[i])*DIR(dDicts[d][i])[0] + (H[i-1]-H[i])*DIR(dDicts[d][i])[1]
+        m.addConstrs((deriv(2,i) <= scale*HYP(dDicts[2][i]) for i in dDicts[2].keys()), "deriv2p")
+        m.addConstrs((deriv(2,i) >= -scale*HYP(dDicts[2][i]) for i in dDicts[2].keys()), "deriv2n")
+
+        deriv = lambda d,i : (H[i+1]-H[i])*DIR(dDicts[d][i])[0] + (H[i-size]-H[i])*DIR(dDicts[d][i])[1]
+        m.addConstrs((deriv(3,i) <= scale*HYP(dDicts[3][i]) for i in dDicts[3].keys()), "deriv3p")
+        m.addConstrs((deriv(3,i) >= -scale*HYP(dDicts[3][i]) for i in dDicts[3].keys()), "deriv3n")
+
+        # Roughness constraint
+        # Formulated as sqrt(sum((xi-x)^2/scale^2)) == r(x)
+        # where xi are the 8 neighbors around x, at the edges we omit neighbors that don't exist
+        # can be written as:
+        # sum((xi-x)^2) == scale^2 * r(x)^2
+        m.addConstrs( # Lower left corner
+            (SQR(H[i+1]-H[i]) + SQR(H[i+size]-H[i]) + SQR(H[i+size+1]-H[i])
+            == SQR(scale*rDicts[0][i]) for i in rDicts[0].keys()), "roughness0")
+        m.addConstrs( # Upper left corner
+            (SQR(H[i-1]-H[i]) + SQR(H[i+size-1]-H[i]) + SQR(H[i+size]-H[i])
+            == SQR(scale*rDicts[1][i]) for i in rDicts[1].keys()), "roughness1")
+        m.addConstrs( # Upper right corner
+            (SQR(H[i-size-1]-H[i]) + SQR(H[i-size]-H[i]) + SQR(H[i-1]-H[i])
+            == SQR(scale*rDicts[2][i]) for i in rDicts[2].keys()), "roughness2")
+        m.addConstrs( # Lower right corner
+            (SQR(H[i-size]-H[i]) + SQR(H[i-size+1]-H[i]) + SQR(H[i+1]-H[i])
+            == SQR(scale*rDicts[3][i]) for i in rDicts[3].keys()), "roughness3")
+        m.addConstrs( # Left edge
+            (SQR(H[i-1]-H[i]) + SQR(H[i+1]-H[i]) +
+            SQR(H[i+size-1]-H[i]) + SQR(H[i+size]-H[i]) + SQR(H[i+size+1]-H[i])
+            == SQR(scale*rDicts[4][i]) for i in rDicts[4].keys()), "roughness4")
+        m.addConstrs( # Upper edge
+            (SQR(H[i-size-1]-H[i]) + SQR(H[i-size]-H[i]) + SQR(H[i-1]-H[i]) +
+            SQR(H[i+size-1]-H[i]) + SQR(H[i+size]-H[i])
+            == SQR(scale*rDicts[5][i]) for i in rDicts[5].keys()), "roughness5")
+        m.addConstrs( # Right edge
+            (SQR(H[i-size-1]-H[i]) + SQR(H[i-size]-H[i]) + SQR(H[i-size+1]-H[i]) +
+            SQR(H[i-1]-H[i]) + SQR(H[i+1]-H[i])
+            == SQR(scale*rDicts[6][i]) for i in rDicts[6].keys()), "roughness6")
+        m.addConstrs( # Lower edge
+            (SQR(H[i-size]-H[i]) + SQR(H[i-size+1]-H[i]) + SQR(H[i+1]-H[i]) +
+            SQR(H[i+size]-H[i]) + SQR(H[i+size+1]-H[i])
+            == SQR(scale*rDicts[7][i]) for i in rDicts[7].keys()), "roughness7")
+        m.addConstrs( # Middle
+            (SQR(H[i-size-1]-H[i]) + SQR(H[i-size]-H[i]) + SQR(H[i-size+1]-H[i]) +
+            SQR(H[i-1]-H[i]) + SQR(H[i+1]-H[i]) +
+            SQR(H[i+size-1]-H[i]) + SQR(H[i+size]-H[i]) + SQR(H[i+size+1]-H[i])
+            == SQR(scale*rDicts[8][i]) for i in rDicts[8].keys()), "roughness8")
+
+        # Position constraint
+        # Formulated as x == p(x)
+        m.addConstrs((H[i] == pDict[i] for i in pDict.keys()), "position")
+
+    #######################
     # Compute optimal solution
     m.optimize()
 
@@ -195,10 +300,11 @@ def EMD(pathGen):
         print("-- Cost =", Cost)
         print("-- Flow =", Flow)
         print("-- EMD =", Cost/Flow)
-        if pathGen:
-            print("-- H =", m.getAttr('x', H).values())
+        #if pathGen:
+        #    print("-- H =", m.getAttr('x', H).values())
 
 
+#######################
 # Entry point, more or less
 if __name__ == '__main__':
     # So really if any argument is given, we use the generator

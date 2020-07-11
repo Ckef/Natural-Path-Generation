@@ -26,35 +26,6 @@ static float total_supplies(
 }
 
 /*****************************/
-static void count_flags(
-	unsigned int  size,
-	Vertex*       data,
-	unsigned int* numS,
-	unsigned int* numD,
-	unsigned int* numR,
-	unsigned int* numP)
-{
-	*numS = 0;
-	*numD = 0;
-	*numR = 0;
-	*numP = 0;
-
-	/* Just count each flag */
-	unsigned int i;
-	for(i = 0; i < size * size; ++i)
-	{
-		if(data[i].flags & SLOPE)
-			++(*numS);
-		if(data[i].flags & DIR_SLOPE)
-			++(*numD);
-		if(data[i].flags & ROUGHNESS)
-			++(*numR);
-		if(data[i].flags & POSITION)
-			++(*numP);
-	}
-}
-
-/*****************************/
 static float max_slope_1d(
 	unsigned int size,
 	Vertex*      data)
@@ -95,13 +66,17 @@ static float max_slope_1d(
 static float max_slope(
 	unsigned int  size,
 	Vertex*       data,
+	unsigned int* count,
 	unsigned int* satisfied,
-	unsigned int* unsatisfied)
+	unsigned int* unsatisfied,
+	float*        avgDistance)
 {
 	float scale = GET_SCALE(size);
 
+	*count = 0;
 	*satisfied = 0;
 	*unsatisfied = 0;
+	*avgDistance = 0;
 
 	/* Maximum 2D slope, i.e. the magnitude of the gradient vector */
 	float m = 0;
@@ -110,6 +85,8 @@ static float max_slope(
 	{
 		if(!(data[ix].flags & SLOPE))
 			continue;
+
+		++(*count);
 
 		/* Loop over all 4 cardinal directions */
 		unsigned int sat = 1;
@@ -125,6 +102,7 @@ static float max_slope(
 			float sy = (data[ixy].h - data[ix].h) / scale;
 			float g = sqrtf(sx * sx + sy * sy);
 
+			*avgDistance += fmaxf(0.0f, g - data[ix].c[0]);
 			sat &= (g <= data[ix].c[0] + S_THRESHOLD);
 			m = g > m ? g : m;
 		}
@@ -135,6 +113,9 @@ static float max_slope(
 			++(*unsatisfied);
 	}
 
+	if(*count)
+		*avgDistance /= (*count) * 4;
+
 	return m;
 }
 
@@ -142,13 +123,17 @@ static float max_slope(
 static void count_dir_slope(
 	unsigned int  size,
 	Vertex*       data,
+	unsigned int* count,
 	unsigned int* satisfied,
-	unsigned int* unsatisfied)
+	unsigned int* unsatisfied,
+	float*        avgDistance)
 {
 	float scale = GET_SCALE(size);
 
+	*count = 0;
 	*satisfied = 0;
 	*unsatisfied = 0;
+	*avgDistance = 0;
 
 	/* Just count satisfied and unsatisfied, there is no global "maximum" or anything */
 	unsigned int ix;
@@ -156,6 +141,8 @@ static void count_dir_slope(
 	{
 		if(!(data[ix].flags & DIR_SLOPE))
 			continue;
+
+		++(*count);
 
 		/* Loop over all 4 cardinal directions */
 		unsigned int sat = 1;
@@ -174,6 +161,7 @@ static void count_dir_slope(
 			float sy = (data[ixy].h - data[ix].h) / scale;
 			float d = fabs(sx * dx + sy * dy);
 
+			*avgDistance += fmaxf(0.0f, d - maxSlope);
 			sat &= (d <= maxSlope + S_THRESHOLD);
 		}
 
@@ -182,19 +170,26 @@ static void count_dir_slope(
 		else
 			++(*unsatisfied);
 	}
+
+	if(*count)
+		*avgDistance /= (*count) * 4;
 }
 
 /*****************************/
 static void count_roughness(
 	unsigned int  size,
 	Vertex*       data,
+	unsigned int* count,
 	unsigned int* satisfied,
-	unsigned int* unsatisfied)
+	unsigned int* unsatisfied,
+	float*        avgDistance)
 {
 	float scale = GET_SCALE(size);
 
+	*count = 0;
 	*satisfied = 0;
 	*unsatisfied = 0;
+	*avgDistance = 0;
 
 	/* Just count satisfied and unsatisfied, there is no global "maximum" or anything */
 	unsigned int ix;
@@ -204,22 +199,34 @@ static void count_roughness(
 			continue;
 
 		float R = calc_roughness(size, data, ix, scale);
-		if(fabs(R - data[ix].c[0]) <= R_THRESHOLD)
+		float dist = fabs(R - data[ix].c[0]);
+
+		++(*count);
+		*avgDistance += dist;
+
+		if(dist <= R_THRESHOLD)
 			++(*satisfied);
 		else
 			++(*unsatisfied);
 	}
+
+	if(*count)
+		*avgDistance /= *count;
 }
 
 /*****************************/
 static void count_position(
 	unsigned int  size,
 	Vertex*       data,
+	unsigned int* count,
 	unsigned int* satisfied,
-	unsigned int* unsatisfied)
+	unsigned int* unsatisfied,
+	float*        avgDistance)
 {
+	*count = 0;
 	*satisfied = 0;
 	*unsatisfied = 0;
+	*avgDistance = 0;
 
 	/* Just count satisfied and unsatisfied, there is no global "maximum" or anything */
 	unsigned int ix;
@@ -228,11 +235,17 @@ static void count_position(
 		if(!(data[ix].flags & POSITION))
 			continue;
 
+		++(*count);
+		*avgDistance += fabs(data[ix].h - data[ix].c[2]);
+
 		if(data[ix].h == data[ix].c[2])
 			++(*satisfied);
 		else
 			++(*unsatisfied);
 	}
+
+	if(*count)
+		*avgDistance /= *count;
 }
 
 /*****************************/
@@ -240,17 +253,16 @@ int mod_stats(unsigned int size, Vertex* data, ModData* mod)
 {
 	/* Get all the data */
 	unsigned int numS, numD, numR, numP;
-	count_flags(size, data, &numS, &numD, &numR, &numP);
-
 	unsigned int satS, unsatS;
 	unsigned int satD, unsatD;
 	unsigned int satR, unsatR;
 	unsigned int satP, unsatP;
+	float distS, distD, distR, distP;
 
-	float mSlope = max_slope(size, data, &satS, &unsatS);
-	count_dir_slope(size, data, &satD, &unsatD);
-	count_roughness(size, data, &satR, &unsatR);
-	count_position(size, data, &satP, &unsatP);
+	float mSlope = max_slope(size, data, &numS, &satS, &unsatS, &distS);
+	count_dir_slope(size, data, &numD, &satD, &unsatD, &distD);
+	count_roughness(size, data, &numR, &satR, &unsatR, &distR);
+	count_position(size, data, &numP, &satP, &unsatP, &distP);
 
 	/* Output it */
 	output("");
@@ -277,6 +289,13 @@ int mod_stats(unsigned int size, Vertex* data, ModData* mod)
 	output("-- #directional:   %u", unsatD);
 	output("-- #roughness:     %u", unsatR);
 	output("-- #position:      %u", unsatP);
+	output("--");
+	output("-- Average distance from goal");
+	output("-- slope:          %f", distS);
+	output("-- directional:    %f", distD);
+	output("-- roughness:      %f", distR);
+	output("-- position:       %f", distP);
+
 	output("");
 
 	/* We don't need to iterate this modifier */

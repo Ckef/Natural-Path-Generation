@@ -6,25 +6,6 @@
 #include "patch.h"
 #include "shader.h"
 
-/* Define some scene values */
-#define SHADER_DIR  "shaders/"
-#define PATCH_VERT  SHADER_DIR "normal.vert"
-#define PATCH_FRAG  SHADER_DIR "lighting.frag"
-#define HELP_VERT   SHADER_DIR "color.vert"
-#define HELP_FRAG   SHADER_DIR "color.frag"
-
-#define DEF_PATCH_SIZE  129 /* 2^N+1 with N=7, that's 128 tiles */
-#define PATCH_HEIGHT    25
-#define AXES_SIZE       16
-#define CAM_FOV         45.0f
-#define CAM_NEAR        0.1f
-#define CAM_FAR         1000.0f
-#define CAM_SPEED       120
-
-/* Scale a patch to the default size */
-/* This is equivalent to the ground distance between two neighbouring vertices */
-#define GET_SCALE(x) ((float)(DEF_PATCH_SIZE-1) / (float)(x-1))
-
 /* Camera definition */
 typedef struct
 {

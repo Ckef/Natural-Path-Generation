@@ -1,8 +1,8 @@
 
+#include "constants.h"
 #include "deps.h"
 #include "output.h"
 #include "patch.h"
-#include "scene.h"
 #include <stdlib.h>
 #include <string.h>
 

@@ -1,16 +1,10 @@
 
+#include "constants.h"
 #include "output.h"
 #include "patch.h"
-#include "scene.h"
 #include <float.h>
 #include <math.h>
 #include <string.h>
-
-/* Hardcoded thresholds for now */
-#define S_THRESHOLD        0.00001f /* Convergence threshold of slope error */
-#define R_THRESHOLD        0.04f /* Convergence threshold of roughness error */
-#define MAX_ITERATIONS     10000
-#define STEP_SIZE          10
 
 /* Check if two indices are on the same column */
 #define SAME_COLUMN(i,j,size) (((i)/size) == ((j)/size))
@@ -36,7 +30,7 @@ static void move_slope(
 }
 
 /*****************************/
-static int get_neighbours(
+int get_neighbours(
 	unsigned int size,
 	unsigned int ix,
 	unsigned int dir,
@@ -149,7 +143,7 @@ static int relax_dir_slope(
 }
 
 /*****************************/
-static float calc_roughness(
+float calc_roughness(
 	unsigned int size,
 	Vertex*      data,
 	unsigned int ix,
@@ -314,15 +308,6 @@ int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 			throw_error("Failed to allocate memory for a relaxation buffer.");
 			return 0;
 		}
-	}
-
-	/* Okay so before we begin, calculate the initial roughness values */
-	if(mod->iterations == 0)
-	{
-		unsigned int ix;
-		for(ix = 0; ix < size*size; ++ix)
-			if(data[ix].flags & ROUGHNESS)
-				data[ix].c[0] = calc_roughness(size, data, ix, scale);
 	}
 
 	/* Now define the input buffer */

@@ -1,12 +1,8 @@
 
+#include "constants.h"
 #include "output.h"
 #include "patch.h"
 #include <stdio.h>
-
-/* Hardcoded output files for now */
-#define OUT_FILE_HEIGHT  "terrain_out.json"
-#define OUT_FILE_FLAGS   "terrain_out_f.json"
-#define OUT_FILE_CONSTRS "terrain_out_c.json"
 
 /*****************************/
 static void print_height(FILE* f, int comma, Vertex* v)

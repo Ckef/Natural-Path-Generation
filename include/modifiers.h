@@ -5,6 +5,36 @@
 #include "patch.h"
 
 /**
+ * Returns the indices of a point its two neighbors for calculations based on gradient.
+ *
+ * @param  size  Width and height of the patch data in vertices.
+ * @param  ix    Index of the point we want its neighbours from.
+ * @param  dir   Direction of the quadrant, in { 0, 1, 2, 3 } (starting at north east going clockwise).
+ * @param  ixx   Output index of the neighbour in the local x direction.
+ * @param  ixy   Output index of the neighbor in the local y direction.
+ */
+int get_neighbours(
+	unsigned int size,
+	unsigned int ix,
+	unsigned int dir,
+	int*         ixx,
+	int*         ixy);
+
+/**
+ * Calculates the roughness of the terrain at a given position.
+ *
+ * @param  size   Width and height of the patch data in vertices.
+ * @param  data   Data array of size * size length (column-major).
+ * @param  ix     Position we want the roughness of.
+ * @param  scale  Scale of the terrain.
+ */
+float calc_roughness(
+	unsigned int size,
+	Vertex*      data,
+	unsigned int ix,
+	float        scale);
+
+/**
  * Simply outputs some statistics about the terrain.
  */
 int mod_stats(unsigned int size, Vertex* data, ModData* mod);
@@ -36,6 +66,7 @@ int mod_subdivide(unsigned int size, Vertex* data, ModData* mod);
  * - gradient (slope)
  * - directional derivative (dir_slope)
  * - roughness
+ * - position
  */
 int mod_relax(unsigned int size, Vertex* data, ModData* mod);
 

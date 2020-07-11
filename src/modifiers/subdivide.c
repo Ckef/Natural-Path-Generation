@@ -1,31 +1,11 @@
 
+#include "constants.h"
+#include "modifiers.h"
 #include "output.h"
 #include "patch.h"
-#include "scene.h"
 #include <float.h>
 #include <math.h>
 #include <stdlib.h>
-
-/* Non-zero if we want to use certain features */
-/* USE_DIR_SLOPE indicates to use directional derivative for path borders */
-/* USE_ROUGHNESS indicates to use roughness constraints */
-/* USE_BORDER_STITCH indicates to set position constraints at patch borders */
-/* USE_BORDER_DERIV extends the patch borders with derivative constraints (more position constraints) */
-#define USE_DIR_SLOPE      0
-#define USE_ROUGHNESS      1
-#define USE_BORDER_STITCH  1
-#define USE_BORDER_DERIV   0
-
-/* Hardcoded path parameters for now */
-/* The falloff is the ascend in the maximum slope the farther you get from the path boundary */
-/* The influence is the distance from the path that the gradient constraint holds */
-/* Maximum gradient ascends along the distance RADIUS + INFLUENCE */
-#define MAX_SLOPE          0.0025f
-#define MAX_SLOPE_FALLOFF  0.05f
-#define PATH_RADIUS        2.2f
-#define PATH_INFLUENCE     10.0f
-#define COST_LIN           10000
-#define COST_POW           1.8f
 
 /* Some macros to make A* a bit easier */
 /* Firstly accessing data of a node */
@@ -460,10 +440,15 @@ int mod_subdivide(unsigned int size, Vertex* data, ModData* mod)
 {
 	if(USE_ROUGHNESS)
 	{
+		float scale = GET_SCALE(size);
+
 		/* Let it rain roughness! */
 		unsigned int i;
 		for(i = 0; i < size*size; ++i)
+		{
+			data[i].c[0] = calc_roughness(size, data, i, scale);
 			data[i].flags = ROUGHNESS;
+		}
 	}
 
 	/* Find a path from the lower left corner to the upper right corner */

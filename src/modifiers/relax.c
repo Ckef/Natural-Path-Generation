@@ -370,5 +370,10 @@ int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 		}
 	}
 
+	/* If we haven't finished all iterations yet, output where we are */
+	/* Only print if we're at a multiple of ITER_PRINT though */
+	if(!mod->done && (mod->iterations % ITER_PRINT == 0))
+		output("%u iterations...", mod->iterations);
+
 	return 1;
 }

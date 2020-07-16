@@ -58,8 +58,9 @@
 /* Hardcoded thresholds for now */
 #define S_THRESHOLD     0.00001f /* Convergence threshold of slope error */
 #define R_THRESHOLD     0.04f /* Convergence threshold of roughness error */
-#define MAX_ITERATIONS  10000
+#define MAX_ITERATIONS  100000
 #define STEP_SIZE       10
+#define ITER_PRINT      1000
 
 
 #endif

@@ -286,6 +286,43 @@ void destroy_scene(Scene* scene)
 }
 
 /*****************************/
+int scene_add_patch(Scene* scene)
+{
+	/* Define the modifiers */
+	PatchModifier mods[] = {
+		/* This first bit is if we want a 1D slope constraint example */
+		/*mod_flatten,
+		mod_stats,
+		mod_relax_slope_1d,
+		mod_flatten,
+		mod_stats,*/
+		mod_subdivide,
+		mod_output,
+		mod_output_flags,
+		mod_output_constrs,
+		mod_stats,
+		mod_relax,
+		mod_output,
+		mod_stats,
+		NULL
+	};
+
+	/* And its output files */
+	const char* outs[] = {
+		NULL,
+		OUT_FILE_L,
+		OUT_FILE_FLAGS,
+		OUT_FILE_CONSTRS,
+		NULL,
+		NULL,
+		OUT_FILE_H,
+		NULL
+	};
+
+	return add_patch(scene, gen_mpd, mods, outs);
+}
+
+/*****************************/
 void draw_scene(Scene* scene)
 {
 	/* Setup patch shader */
@@ -356,6 +393,17 @@ void update_scene(Scene* scene, double dTime)
 }
 
 /*****************************/
+int is_scene_done(Scene* scene)
+{
+	int done = 1;
+	size_t p;
+	for(p = 0; p < scene->grid_size * scene->grid_size * 4; ++p)
+		done &= is_patch_done(scene->patches + p);
+
+	return done;
+}
+
+/*****************************/
 void scene_framebuffer_size_callback(Scene* scene, int width, int height)
 {
 	float aspect = (float)width / (float)height;
@@ -398,36 +446,5 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 
 	/* Add a new patch */
 	if(key == GLFW_KEY_ENTER && action == GLFW_PRESS)
-	{
-		PatchModifier mods[] = {
-			/* This first bit is if we want a 1D slope constraint example */
-			/*mod_flatten,
-			mod_stats,
-			mod_relax_slope_1d,
-			mod_flatten,
-			mod_stats,*/
-			mod_subdivide,
-			mod_output,
-			mod_output_flags,
-			mod_output_constrs,
-			mod_stats,
-			mod_relax,
-			mod_output,
-			mod_stats,
-			NULL
-		};
-
-		const char* outs[] = {
-			NULL,
-			OUT_FILE_L,
-			OUT_FILE_FLAGS,
-			OUT_FILE_CONSTRS,
-			NULL,
-			NULL,
-			OUT_FILE_H,
-			NULL
-		};
-
-		add_patch(scene, gen_mpd, mods, outs);
-	}
+		scene_add_patch(scene);
 }

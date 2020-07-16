@@ -138,5 +138,10 @@ int populate_patch(
  */
 int update_patch(Patch* patch);
 
+/**
+ * Checks if a patch is done with all its current modifiers.
+ */
+int is_patch_done(Patch* patch);
+
 
 #endif

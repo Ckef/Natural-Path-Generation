@@ -57,6 +57,13 @@ int create_scene(Scene* scene, ModMode mode, unsigned int patchSize);
 void destroy_scene(Scene* scene);
 
 /**
+ * Forces the scene to place a patch at the current selection.
+ *
+ * @return  Zero on failure.
+ */
+int scene_add_patch(Scene* scene);
+
+/**
  * Draws the scene.
  */
 void draw_scene(Scene* scene);
@@ -67,6 +74,11 @@ void draw_scene(Scene* scene);
  * @param  dTime  Delta time of the current frame.
  */
 void update_scene(Scene* scene, double dTime);
+
+/**
+ * Checks if all the patches of a scene are done with all their current modifiers.
+ */
+int is_scene_done(Scene* scene);
 
 /**
  * Callback to be called when the framebuffer is resized.

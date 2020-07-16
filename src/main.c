@@ -85,9 +85,11 @@ int main(int argc, char* argv[])
 	/*    s = sequential */
 	/*    p = parallel */
 	/*    g = gpu (parallel) */
+	/* - Fourth argument sets the program to automatic (any value sets it) */
 	Scene scene;
 	unsigned int pSize = 0;
 	ModMode mode = SEQUENTIAL;
+	int aut = 0;
 
 	if(argc > 1)
 		pSize = atoi(argv[1]);
@@ -98,6 +100,8 @@ int main(int argc, char* argv[])
 		argv[3][0] == 'p' ? PARALLEL :
 		argv[3][0] == 'g' ? GPU :
 		mode;
+	if(argc > 4)
+		aut = 1;
 
 	if(!create_scene(&scene, mode, pSize))
 	{
@@ -115,7 +119,9 @@ int main(int argc, char* argv[])
 	glfwGetFramebufferSize(win, &width, &height);
 	framebuffer_size_callback(win, width, height);
 
-	/* Main loop */
+	/* Alright so if the program is set to automatic, create a first patch */
+	/* Then enter the main loop */
+	if(aut) scene_add_patch(&scene);
 	double time = glfwGetTime();
 
 	while(!glfwWindowShouldClose(win))
@@ -129,6 +135,11 @@ int main(int argc, char* argv[])
 		double newTime = glfwGetTime();
 		update_scene(&scene, newTime - time);
 		time = newTime;
+
+		/* If we want to close automatically... */
+		/* Check if all patches of the scene are done */
+		if(aut && is_scene_done(&scene))
+			glfwSetWindowShouldClose(win, GLFW_TRUE);
 
 		/* Process events */
 		glfwPollEvents();

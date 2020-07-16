@@ -324,3 +324,14 @@ int update_patch(Patch* patch)
 
 	return upload_vertex_data(patch);
 }
+
+/*****************************/
+int is_patch_done(Patch* patch)
+{
+	int done = 1;
+	size_t m;
+	for(m = 0; m < patch->num_mods; ++m)
+		done &= patch->mods[m].done;
+
+	return done;
+}

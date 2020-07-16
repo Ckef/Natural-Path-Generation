@@ -37,10 +37,12 @@
 /* USE_ROUGHNESS indicates to use roughness constraints */
 /* USE_BORDER_STITCH indicates to set position constraints at patch borders */
 /* USE_BORDER_DERIV extends the patch borders with derivative constraints (more position constraints) */
+/* When AUTO_SURROUND is non-zero, any patch will first be surrounded by 4 unconstrained patches */
 #define USE_DIR_SLOPE      0
 #define USE_ROUGHNESS      1
 #define USE_BORDER_STITCH  1
 #define USE_BORDER_DERIV   0
+#define AUTO_SURROUND      0
 
 /* Hardcoded path parameters for now */
 /* The falloff is the ascend in the maximum slope the farther you get from the path boundary */

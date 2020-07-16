@@ -456,8 +456,8 @@ int mod_subdivide(unsigned int size, Vertex* data, ModData* mod)
 	float r = PATH_RADIUS / scale;
 	float b = PATH_INFLUENCE / scale;
 
-	ANode bot = { .c = size * .6f, .r = 0 };
-	ANode top = { .c = size * .6f, .r = size-1 };
+	ANode bot = { .c = size * .6f, .r = size * .1f };
+	ANode top = { .c = size * .6f, .r = size * .9f };
 	ANode le = { .c = size * .2f, .r = size * .5f };
 	ANode ri = { .c = size * .8f, .r = size * .3f };
 

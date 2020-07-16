@@ -319,6 +319,30 @@ int scene_add_patch(Scene* scene)
 		NULL
 	};
 
+	/* First place 4 surrounding patches if necessary */
+	if(AUTO_SURROUND)
+	{
+		/* Left */
+		scene->help_pos[0] -= 1;
+		add_patch(scene, gen_mpd, NULL, NULL);
+
+		/* Right */
+		scene->help_pos[0] += 2;
+		add_patch(scene, gen_mpd, NULL, NULL);
+
+		/* Down */
+		scene->help_pos[0] -= 1;
+		scene->help_pos[1] -= 1;
+		add_patch(scene, gen_mpd, NULL, NULL);
+
+		/* Up */
+		scene->help_pos[1] += 2;
+		add_patch(scene, gen_mpd, NULL, NULL);
+
+		scene->help_pos[1] -= 1;
+	}
+
+	/* Now place the main patch */
 	return add_patch(scene, gen_mpd, mods, outs);
 }
 

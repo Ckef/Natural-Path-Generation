@@ -78,24 +78,26 @@ int main(int argc, char* argv[])
 	glfwSetFramebufferSizeCallback(win, framebuffer_size_callback);
 	glfwSetKeyCallback(win, key_callback);
 
-	/* Create a scene */
-	/* First see if an input mode and patch size was given */
-	/* The first parameter determines the mode */
-	/* s = sequential */
-	/* p = parallel */
-	/* g = gpu (parallel) */
-	/* The second parameter is a number for the grid size */
+	/* Create a scene, check if input was given */
+	/* - First argument is a number for the grid size */
+	/* - Second argument is the seed to use, must be > 0 */
+	/* - Third argument determines the mode */
+	/*    s = sequential */
+	/*    p = parallel */
+	/*    g = gpu (parallel) */
 	Scene scene;
-	ModMode mode = PARALLEL;
 	unsigned int pSize = 0;
+	ModMode mode = SEQUENTIAL;
 
-	if(argc > 1) mode =
-		argv[1][0] == 's' ? SEQUENTIAL :
-		argv[1][0] == 'p' ? PARALLEL :
-		argv[1][0] == 'g' ? GPU :
-		mode;
+	if(argc > 1)
+		pSize = atoi(argv[1]);
 	if(argc > 2)
-		pSize = atoi(argv[2]);
+		srand(atoi(argv[2]));
+	if(argc > 3) mode =
+		argv[3][0] == 's' ? SEQUENTIAL :
+		argv[3][0] == 'p' ? PARALLEL :
+		argv[3][0] == 'g' ? GPU :
+		mode;
 
 	if(!create_scene(&scene, mode, pSize))
 	{

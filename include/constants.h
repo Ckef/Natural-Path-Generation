@@ -4,9 +4,10 @@
 
 /*****************************/
 /* Hardcoded output files for now */
-#define OUT_FILE_HEIGHT   "terrain_out.json"
+#define OUT_FILE_L        "terrain_out_l.json"
 #define OUT_FILE_FLAGS    "terrain_out_f.json"
 #define OUT_FILE_CONSTRS  "terrain_out_c.json"
+#define OUT_FILE_H        "terrain_out_h.json"
 
 
 /*****************************/
@@ -45,7 +46,7 @@
 /* The falloff is the ascend in the maximum slope the farther you get from the path boundary */
 /* The influence is the distance from the path that the gradient constraint holds */
 /* Maximum gradient ascends along the distance RADIUS + INFLUENCE */
-#define MAX_SLOPE          0.0025f
+#define MAX_SLOPE          0.0035f
 #define MAX_SLOPE_FALLOFF  0.05f
 #define PATH_RADIUS        2.2f
 #define PATH_INFLUENCE     10.0f

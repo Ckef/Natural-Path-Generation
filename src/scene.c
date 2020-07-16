@@ -38,7 +38,11 @@ static size_t get_grid_index(unsigned int gridSize, int x, int y)
 }
 
 /*****************************/
-static int add_patch(Scene* scene, PatchGenerator generator, PatchModifier* mods)
+static int add_patch(
+	Scene*         scene,
+	PatchGenerator generator,
+	PatchModifier* mods,
+	const char**   outs)
 {
 	/* First check if we have enough memory */
 	int x = scene->help_pos[0];
@@ -124,7 +128,7 @@ static int add_patch(Scene* scene, PatchGenerator generator, PatchModifier* mods
 		}
 
 	/* Populate the new patch */
-	if(!populate_patch(p, generator, mods, local))
+	if(!populate_patch(p, generator, mods, outs, local))
 	{
 		throw_error("Population of newly created patch failed.");
 		destroy_patch(p);
@@ -396,18 +400,34 @@ void scene_key_callback(Scene* scene, int key, int action, int mods)
 	if(key == GLFW_KEY_ENTER && action == GLFW_PRESS)
 	{
 		PatchModifier mods[] = {
+			/* This first bit is if we want a 1D slope constraint example */
 			/*mod_flatten,
 			mod_stats,
 			mod_relax_slope_1d,
 			mod_flatten,
 			mod_stats,*/
 			mod_subdivide,
+			mod_output,
+			mod_output_flags,
+			mod_output_constrs,
 			mod_stats,
 			mod_relax,
+			mod_output,
 			mod_stats,
 			NULL
 		};
 
-		add_patch(scene, gen_mpd, mods);
+		const char* outs[] = {
+			NULL,
+			OUT_FILE_L,
+			OUT_FILE_FLAGS,
+			OUT_FILE_CONSTRS,
+			NULL,
+			NULL,
+			OUT_FILE_H,
+			NULL
+		};
+
+		add_patch(scene, gen_mpd, mods, outs);
 	}
 }

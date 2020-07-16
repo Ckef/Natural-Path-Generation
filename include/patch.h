@@ -39,6 +39,7 @@ typedef struct
 typedef struct
 {
 	void*        mod;        /* In reality a function pointer to the modifier in question */
+	const char*  out;        /* Output file, if any */
 	ModMode      mode;
 	Vertex*      snap; /* TODO: Not yet operational */
 
@@ -119,6 +120,7 @@ void draw_patch(Patch* patch);
  *
  * @param  generator  Function that generates a terrain.
  * @param  mods       Array of modifiers (can be NULL), last element must be NULL.
+ * @param  outs       Output files (can be NULL), elements can be NULL, must be same length as mods.
  * @param  local      The 3x3 neighborhoud of this patch at time of creation, can be NULL.
  * @return            Zero if population failed.
  */
@@ -126,6 +128,7 @@ int populate_patch(
 	Patch*         patch,
 	PatchGenerator generator,
 	PatchModifier* mods,
+	const char**   outs,
 	Patch*         local[]);
 
 /**

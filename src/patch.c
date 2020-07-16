@@ -223,6 +223,7 @@ int populate_patch(
 	Patch*         patch,
 	PatchGenerator generator,
 	PatchModifier* mods,
+	const char**   outs,
 	Patch*         local[])
 {
 	/* Destroy the current modifiers */
@@ -258,6 +259,11 @@ int populate_patch(
 			patch->mods[m].done       = 0;
 			patch->mods[m].iterations = 0;
 			patch->mods[m].buffer     = NULL;
+
+			if(outs)
+				patch->mods[m].out = outs[m];
+			else
+				patch->mods[m].out = NULL;
 
 			/* If we have local neighbourhood data, grab their vertex data */
 			/* While we're at it, check that their size is equivalent */

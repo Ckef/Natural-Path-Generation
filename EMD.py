@@ -7,10 +7,10 @@ from gurobipy import GRB
 from itertools import chain
 
 # Hardcoded input files for now
-L_FILE         = 'terrain_L.json'
+L_FILE         = 'terrain_out_l.json'
 L_FLAGS_FILE   = 'terrain_out_f.json'
 L_CONSTRS_FILE = 'terrain_out_c.json'
-H_FILE         = 'terrain_H.json'
+H_FILE         = 'terrain_out_h.json'
 
 
 #######################
@@ -251,6 +251,7 @@ def EMD(pathGen):
         # where xi are the 8 neighbors around x, at the edges we omit neighbors that don't exist
         # can be written as:
         # sum((xi-x)^2) == scale^2 * r(x)^2
+        # TODO: incorporate threshold, maybe this makes it feasible?
         m.addConstrs( # Lower left corner
             (SQR(H[i+1]-H[i]) + SQR(H[i+size]-H[i]) + SQR(H[i+size+1]-H[i])
             == SQR(scale*rDicts[0][i]) for i in rDicts[0].keys()), "roughness0")
@@ -299,7 +300,7 @@ def EMD(pathGen):
         Flow = sum(m.getAttr('x', flow).values())
         print("-- Cost =", Cost)
         print("-- Flow =", Flow)
-        print("-- EMD =", Cost/Flow)
+        print("-- EMD =", Cost/len(L)) # Instead of dividing by Flow, divide by N
         #if pathGen:
         #    print("-- H =", m.getAttr('x', H).values())
 

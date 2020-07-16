@@ -67,21 +67,30 @@ static int output_terrain(
 /*****************************/
 int mod_output(unsigned int size, Vertex* data, ModData* mod)
 {
+	if(!mod->out)
+		throw_error("No output file was given to the output modifier.");
+
 	/* We don't need to iterate this modifier */
 	mod->done = 1;
-	return output_terrain(size, data, print_height, OUT_FILE_HEIGHT);
+	return output_terrain(size, data, print_height, mod->out);
 }
 
 /*****************************/
 int mod_output_flags(unsigned int size, Vertex* data, ModData* mod)
 {
+	if(!mod->out)
+		throw_error("No output file was given to the flag output modifier.");
+
 	mod->done = 1;
-	return output_terrain(size, data, print_flags, OUT_FILE_FLAGS);
+	return output_terrain(size, data, print_flags, mod->out);
 }
 
 /*****************************/
 int mod_output_constrs(unsigned int size, Vertex* data, ModData* mod)
 {
+	if(!mod->out)
+		throw_error("No output file was given to the constraint output modifier.");
+
 	mod->done = 1;
-	return output_terrain(size, data, print_constrs, OUT_FILE_CONSTRS);
+	return output_terrain(size, data, print_constrs, mod->out);
 }

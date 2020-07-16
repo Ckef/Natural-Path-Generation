@@ -438,11 +438,11 @@ static void flag_borders(unsigned int size, Vertex* data, ModData* mod)
 /*****************************/
 int mod_subdivide(unsigned int size, Vertex* data, ModData* mod)
 {
+	float scale = GET_SCALE(size);
+
+	/* Let it rain roughness! */
 	if(USE_ROUGHNESS)
 	{
-		float scale = GET_SCALE(size);
-
-		/* Let it rain roughness! */
 		unsigned int i;
 		for(i = 0; i < size*size; ++i)
 		{
@@ -451,11 +451,29 @@ int mod_subdivide(unsigned int size, Vertex* data, ModData* mod)
 		}
 	}
 
-	/* Find a path from the lower left corner to the upper right corner */
-	ANode s = { .c = 0,      .r = 0      };
-	ANode g = { .c = size-1, .r = size-1 };
+	/* Now we define a graph over the terrain */
+	/* Flag some nodes for our graph */
+	float r = PATH_RADIUS / scale;
+	float b = PATH_INFLUENCE / scale;
 
-	if(!find_path(size, data, s, g))
+	ANode bot = { .c = size * .6f, .r = 0 };
+	ANode top = { .c = size * .6f, .r = size-1 };
+	ANode le = { .c = size * .2f, .r = size * .5f };
+	ANode ri = { .c = size * .8f, .r = size * .3f };
+
+	flag_ellipse(size, data, bot, r, r, b);
+	flag_ellipse(size, data, top, r, r, b);
+	flag_ellipse(size, data, le, r * 3.0f, r * 2.5f, b);
+	flag_ellipse(size, data, ri, r * 2.8f, r * 2.0f, b);
+
+	/* Find a path from each node to the others */
+	if(!find_path(size, data, bot, le))
+		return 0;
+	if(!find_path(size, data, le, ri))
+		return 0;
+	if(!find_path(size, data, le, top))
+		return 0;
+	if(!find_path(size, data, ri, top))
 		return 0;
 
 	/* Lastly, constrain the borders to match the neighbors */

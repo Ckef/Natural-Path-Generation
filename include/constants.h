@@ -8,6 +8,7 @@
 #define OUT_FILE_FLAGS    "terrain_out_f.json"
 #define OUT_FILE_CONSTRS  "terrain_out_c.json"
 #define OUT_FILE_H        "terrain_out_h.json"
+#define OUT_FILE_ITERS    "iter_out.txt"
 
 
 /*****************************/
@@ -38,8 +39,8 @@
 /* USE_BORDER_STITCH indicates to set position constraints at patch borders */
 /* USE_BORDER_DERIV extends the patch borders with derivative constraints (more position constraints) */
 /* When AUTO_SURROUND is non-zero, any patch will first be surrounded by 4 unconstrained patches */
-#define USE_DIR_SLOPE      0
-#define USE_ROUGHNESS      1
+#define USE_DIR_SLOPE      1
+#define USE_ROUGHNESS      0
 #define USE_BORDER_STITCH  1
 #define USE_BORDER_DERIV   0
 #define AUTO_SURROUND      0

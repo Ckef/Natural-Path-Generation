@@ -4,6 +4,7 @@
 #include "patch.h"
 #include <float.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
 /* Check if two indices are on the same column */
@@ -365,6 +366,20 @@ int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 			free(mod->buffer);
 			mod->buffer = NULL;
 			mod->done = 1;
+
+			/* Open a file to append this terrain's data to it */
+			FILE* f = fopen(mod->out, "a");
+			if(f == NULL)
+			{
+				throw_error("Could not open file: %s", mod->out);
+				break;
+			}
+
+			/* Write number of iterations to file */
+			fprintf(f, "%u\n", mod->iterations);
+			fclose(f);
+
+			output("Iteration count has been written to file: %s", mod->out);
 
 			break;
 		}

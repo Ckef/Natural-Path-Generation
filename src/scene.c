@@ -314,7 +314,7 @@ int scene_add_patch(Scene* scene)
 		OUT_FILE_FLAGS,
 		OUT_FILE_CONSTRS,
 		NULL,
-		NULL,
+		OUT_FILE_ITERS,
 		OUT_FILE_H,
 		NULL
 	};

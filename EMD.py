@@ -6,7 +6,7 @@ import sys
 from gurobipy import GRB
 from itertools import chain
 
-# Hardcoded input files for now
+# Hardcoded input/output files for now
 L_FILE         = 'terrain_out_l.json'
 L_FLAGS_FILE   = 'terrain_out_f.json'
 L_CONSTRS_FILE = 'terrain_out_c.json'
@@ -309,20 +309,28 @@ def EMD(pathGen):
     m.optimize()
 
     # Print solution
+    # Also write to relevant files
+    f = open(EMD_FILE, 'a')
+
     if m.status == GRB.OPTIMAL:
         Cost = m.getAttr("ObjVal")
         Flow = sum(m.getAttr('x', flow).values())
+
+        # Print the numerical results
         print("-- Size =", len(L))
         print("-- Cost =", Cost)
         print("-- Flow =", Flow)
 
         # Also write solution to file
+        f.write("{}\n".format(Cost))
         if pathGen:
             writeTerrain(H_OPT_FILE, m.getAttr('x', H).values(), size)
 
-        f = open(EMD_FILE, 'a')
-        f.write("{}\n".format(Cost))
-        f.close()
+    else:
+        # Write a skip to file
+        f.write("-\n")
+
+    f.close()
 
 
 #######################

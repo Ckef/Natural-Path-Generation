@@ -51,8 +51,8 @@ $(OUT):
 # Cleaning
 clean:
 	@rm -Rf $(OUT)
-	@rm *.txt
-	@rm *.json
+	@rm -f *.txt
+	@rm -f *.json
 
 
 ###############################

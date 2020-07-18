@@ -316,7 +316,7 @@ int scene_add_patch(Scene* scene)
 		NULL,
 		OUT_FILE_ITERS,
 		OUT_FILE_H,
-		NULL
+		OUT_FILE_STATS,
 	};
 
 	/* First place 4 surrounding patches if necessary */

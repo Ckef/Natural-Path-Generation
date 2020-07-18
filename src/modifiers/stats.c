@@ -298,6 +298,42 @@ int mod_stats(unsigned int size, Vertex* data, ModData* mod)
 
 	output("");
 
+	/* Open a file to append this terrain's stats to it */
+	/* Obviously only do this when an output file was given */
+	if(mod->out != NULL)
+	{
+		FILE* f = fopen(mod->out, "a");
+		if(f == NULL)
+			throw_error("Could not open file: %s", mod->out);
+		else
+		{
+			/* Write stats to file, do this with a JSON object on a new line */
+			/* This object contains a bunch of fields for each constraint */
+			/* The constraints are: */
+			/* _s  slope (or gradient) */
+			/* _d  directional derivative */
+			/* _r  roughness */
+			/* _p  position */
+			/* All the fields then are: */
+			/* n_s, n_d, n_r, n_p  The number of constraints */
+			/* s_s, s_d, s_r, s_p  Satisfied constraints */
+			/* u_s, u_d, u_r, u_p  Unsatisfied constraints */
+			/* d_s, d_d, d_r, d_p  Average distance from goal */
+			fprintf(f,
+				"{ \"n_s\" : %u, \"n_d\" : %u, \"n_r\" : %u, \"n_p\" : %u,"
+				"  \"s_s\" : %u, \"s_d\" : %u, \"s_r\" : %u, \"s_p\" : %u,"
+				"  \"u_s\" : %u, \"u_d\" : %u, \"u_r\" : %u, \"u_p\" : %u,"
+				"  \"d_s\" : %f, \"d_d\" : %f, \"d_r\" : %f, \"d_p\" : %f }\n",
+				numS, numD, numR, numP,
+				satS, satD, satR, satP,
+				unsatS, unsatD, unsatR, unsatP,
+				distS, distD, distR, distP);
+
+			fclose(f);
+			output("Terrain stats have been written to file: %s", mod->out);
+		}
+	}
+
 	/* We don't need to iterate this modifier */
 	mod->done = 1;
 	return 1;

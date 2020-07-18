@@ -368,6 +368,10 @@ int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 			mod->done = 1;
 
 			/* Open a file to append this terrain's data to it */
+			/* Obviously only do this when an output file was given */
+			if(mod->out == NULL)
+				break;
+
 			FILE* f = fopen(mod->out, "a");
 			if(f == NULL)
 			{

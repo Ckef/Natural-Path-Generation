@@ -9,6 +9,7 @@
 #define OUT_FILE_CONSTRS  "terrain_out_c.json"
 #define OUT_FILE_H        "terrain_out_h.json"
 #define OUT_FILE_ITERS    "iter_out.txt"
+#define OUT_FILE_STATS    "stats_out.txt"
 
 
 /*****************************/

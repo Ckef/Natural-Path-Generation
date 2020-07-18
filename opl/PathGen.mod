@@ -6,10 +6,11 @@
 
 int TC = 5; // Terrain width (number of columns)
 int TR = 5; // Terrain height (number of rows)
-int Sigma = 8; // Cost of creating/destroying, in this case, Sigma >= all d_ij
 
 // TScale would be the distance between two adjacent vertices
+// Sigma is the cost of creating/destroying, in this case, Sigma >= all d_ij
 float TScale = (129-1)/(maxl(TC,TR)-1); // See the C project for this rule
+float Sigma = 8*TScale; 
 
 // Dim would be dimension, i.e. how to access the terrain
 range DimC = 0..TC-1;
@@ -38,10 +39,10 @@ subject to{
 
   forall(ic in DimC, ir in DimR)
     sum(jc in DimC, jr in DimR) F[ic][ir][jc][jr] <= L[ic][ir];
-  
+
   forall(jc in DimC, jr in DimR)
     sum(ic in DimC, ir in DimR) F[ic][ir][jc][jr] <= H[jc][jr];
-  
+
   sum(ic in DimC, ir in DimR, jc in DimC, jr in DimR)
     F[ic][ir][jc][jr] == minl(
       sum(ic in DimC, ir in DimR) L[ic][ir],
@@ -56,9 +57,9 @@ float Cost = (sum(ic in DimC, ir in DimR, jc in DimC, jr in DimR)
     sum(jc in DimC, jr in DimR) H[jc][jr]);
 float Flow = sum(ic in DimC, ir in DimR, jc in DimC, jr in DimR)
   F[ic][ir][jc][jr];
-    
+
 execute DISPLAY_RESULTS {
   writeln("Cost=", Cost);
   writeln("Flow=", Flow);
 }
- 
+

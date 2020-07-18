@@ -11,6 +11,8 @@ L_FILE         = 'terrain_out_l.json'
 L_FLAGS_FILE   = 'terrain_out_f.json'
 L_CONSTRS_FILE = 'terrain_out_c.json'
 H_FILE         = 'terrain_out_h.json'
+H_OPT_FILE     = 'terrain_out_h_opt.json'
+EMD_FILE       = 'emd_out.txt'
 
 
 #######################
@@ -20,6 +22,18 @@ def readTerrain(filename):
     terr = json.loads(f.read())
     f.close()
     return terr
+
+# Writes a terrain from list
+def writeTerrain(filename, data, size):
+    # First make it into a 2D list again
+    terr = [[0] * size] * size
+    for c in range(0,size):
+        for r in range(0,size):
+            terr[c][r] = data[c*size+r]
+
+    f = open(filename, 'w')
+    f.write(json.dumps(terr))
+    f.close()
 
 
 #######################
@@ -128,7 +142,7 @@ def EMD(pathGen):
     # sigma is the cost of creating/destroying, in this case, sigma >= all d_ij
     size = len(L)
     scale = (129-1)/(size-1) # See the C project for this rule
-    sigma = (size-1)*2
+    sigma = (size-1)*scale*2
 
     # First flatten the data and build all dictionaries
     L = list(chain.from_iterable(L))
@@ -298,11 +312,17 @@ def EMD(pathGen):
     if m.status == GRB.OPTIMAL:
         Cost = m.getAttr("ObjVal")
         Flow = sum(m.getAttr('x', flow).values())
+        print("-- Size =", len(L))
         print("-- Cost =", Cost)
         print("-- Flow =", Flow)
-        print("-- EMD =", Cost/len(L)) # Instead of dividing by Flow, divide by N
-        #if pathGen:
-        #    print("-- H =", m.getAttr('x', H).values())
+
+        # Also write solution to file
+        if pathGen:
+            writeTerrain(H_OPT_FILE, m.getAttr('x', H).values(), size)
+
+        f = open(EMD_FILE, 'a')
+        f.write("{}\n".format(Cost))
+        f.close()
 
 
 #######################

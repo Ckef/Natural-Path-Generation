@@ -49,8 +49,6 @@ def buildDist(size, scale):
 
     return dist
 
-
-#######################
 # Builds dictionaries for all constraints
 # If no constraint data is present, it just returns nothing
 def buildConstrs(size, L_flags, L_constrs):

@@ -23,6 +23,7 @@
 # directories
 *bin/
 *obj/
+*results/
 
 # Hardcoded heh
 terr

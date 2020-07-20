@@ -53,7 +53,8 @@ def calcEMD(result):
 # Draws the plot
 # measure should tell us what to visualize
 # filenames is a list of lists, each item is a separate data set we want to plot
-def plot(measure, filenames):
+# Colors are per dataset
+def plot(measure, filenames, colors):
     # First read everything then call the appropriate plotters
     results = [[readResults(f) for f in files] for files in filenames]
 
@@ -66,7 +67,9 @@ def plot(measure, filenames):
         plt.title("p-approximation")
         plt.boxplot(
             [calcEMD(r) for r in data],
-            labels=[label(r) for r in data])
+            #[list(filter(None, r["emds"])) for r in data], # Actual EMD, instead of ratio
+            labels=[label(r) for r in data],
+            medianprops={"linewidth":2.5})
 
     if measure == "iter":
         # Visualize iterations
@@ -76,16 +79,21 @@ def plot(measure, filenames):
 
         plt.title("# Iterations")
         plt.yscale("log")
+        bplots = []
         for d in range(0,num):
-            plt.boxplot(
+            bplots.append(plt.boxplot(
                 # Make sure to skip any sample that reached maximum iterations
                 # We position each plot with 0.8 space inbetween
-                [list(filter(lambda x : x != None, r["iterations"])) for r in results[d]],
-                positions=[i*num + (d-(num-1)/2)*0.8 for i in range(0,len(results[d]))])
+                [list(filter(None, r["iterations"])) for r in results[d]],
+                positions=[i*num + (d-(num-1)/2)*0.8 for i in range(0,len(results[d]))],
+                medianprops={"linewidth":2.5, "color":colors[d]}))
 
         plt.xticks(
             [i*num for i in range(0,len(longest))],
             [label(r) for r in longest])
+        #plt.legend(
+        #    [bplot["medians"][0] for bplot in bplots[:2]],
+        #    ["directional derivative", "roughness"])
 
     plt.grid(axis='y', linestyle=':')
     plt.show()
@@ -101,9 +109,18 @@ if __name__ == '__main__':
         print("--   code     Code appended to the results .json file to read.")
         print("--   ...      More codes, treated as separate data sets.")
     else:
+        # A color dictionary...
+        codecolor = {
+            "deriv" : "gold",
+            "rough" : "green",
+            "deriv_border" : "gold",
+            "rough_border" : "green"
+        }
+
         # Get all arguments
         measure = sys.argv[1]
         size = int(sys.argv[2])
         filenames = [getFiles(size, c) for c in sys.argv[3:]]
+        colors = [codecolor.get(c, "orange") for c in sys.argv[3:]]
 
-        plot(measure, filenames)
+        plot(measure, filenames, colors)

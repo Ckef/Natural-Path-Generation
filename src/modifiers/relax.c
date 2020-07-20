@@ -380,9 +380,13 @@ int mod_relax(unsigned int size, Vertex* data, ModData* mod)
 			}
 
 			/* Write number of iterations to file */
-			fprintf(f, "%u\n", mod->iterations);
-			fclose(f);
+			/* When max iterations was reached, write nothing */
+			if(done)
+				fprintf(f, "%u\n", mod->iterations);
+			else
+				fputs("-\n", f);
 
+			fclose(f);
 			output("Iteration count has been written to file: %s", mod->out);
 
 			break;

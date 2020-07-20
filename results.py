@@ -86,7 +86,7 @@ def results(size, emd, opt, Ns, filecode):
         "samples" : Ns,
         "emds" : emds,
         "emds_opt" : emds_opt,
-        "iterations" : [int(i) for i in iters],
+        "iterations" : [None if i == "-\n" else int(i) for i in iters],
         "stats_L" : [json.loads(s) for s in statsL],
         "stats_H" : [json.loads(s) for s in statsH]
     }

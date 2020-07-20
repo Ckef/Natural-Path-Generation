@@ -48,7 +48,8 @@ def plot(measure, filenames):
         # Visualize iterations
         plt.title("# Iterations")
         plt.boxplot(
-            [r["iterations"] for r in results],
+            # Make sure to skip any sample that reached maximum iterations
+            [list(filter(lambda x : x != None, r["iterations"])) for r in results],
             labels=["{0}x{0}".format(r["size"]) for r in results])
         plt.yscale("log")
 

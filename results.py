@@ -109,7 +109,7 @@ if __name__ == '__main__':
         print("--   emd   True to calculate the EMD.")
         print("--   opt   True to calculate the optimum and its EMD (False if emd is False).")
         print("--   Ns    Sample size, i.e. number of random terrains to evaluate.")
-        print("--   code  Code to append to the output results.json file.")
+        print("--   code  Code to append to the output results .json file.")
     else:
         bStrs = ['y', 'yes', 't', 'true', 'on', '1']
 

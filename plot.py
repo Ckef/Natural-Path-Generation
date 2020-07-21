@@ -56,13 +56,30 @@ def calcUnsatisfied(result):
         (stats["n_s"] + stats["n_d"] + stats["n_r"] + stats["n_p"])
         for stats in result["stats_H"]]
 
+# Calculates the average distance of constraints to their goal
+# Code should be the code of a constraint (we don't do position):
+#   s  for gradient (slope)
+#   d  for directional derivative
+#   r  for roughness
+def calcDistance(code, result):
+    dist = []
+    for s in range(0,result["samples"]):
+        # Skip if it reached a solution
+        # TODO: If we plot all, we can see this distance is not greater
+        # than the satisfied constraints, do we plot those too?
+        if result["iterations"][s] == None:
+            dist.append(result["stats_H"][s]["d_"+code])
+
+    return dist
+
 
 #######################
 # Draws the plot
 # measure should tell us what to visualize
 # filenames is a list of lists, each item is a separate data set we want to plot
 # Colors are per dataset
-def plot(measure, filenames, colors):
+# If box is true, boxplots shall be drawn
+def plot(measure, filenames, colors, box):
     # First read everything
     results = [[readResult(f) for f in files] for files in filenames]
 
@@ -103,6 +120,11 @@ def plot(measure, filenames, colors):
         plt.title("% unsatisfied constraints")
         data = [[calcUnsatisfied(r) for r in d] for d in results]
 
+    # Fill in data for average distance to goal
+    if measure[2:] == "dist":
+        plt.title("$E$ (distance of unsatisfied constraints from their goal)")
+        data = [[calcDistance(measure[0], r) for r in d] for d in results]
+
     #######################
     # A plot for each data set
     num = len(data)
@@ -116,7 +138,7 @@ def plot(measure, filenames, colors):
         # We position each plot with 0.8 space inbetween
         pos = [i*num + (d-(num-1)/2)*0.8 for i in range(0,len(data[d]))]
 
-        if measure != "unsat":
+        if box:
             # Boxplots
             plt.boxplot(
                 data[d], positions=pos, showfliers=False, zorder=1,
@@ -126,7 +148,7 @@ def plot(measure, filenames, colors):
 
         # The scatter plot overlays
         for i in range(0,len(data[d])):
-            if measure == "unsat":
+            if not box:
                 plt.scatter([pos[i]]*len(data[d][i]), data[d][i], 20, colors[d])
             else:
                 x = np.random.normal(pos[i], 0.04, size=len(data[d][i]))
@@ -148,7 +170,7 @@ def plot(measure, filenames, colors):
 if __name__ == '__main__':
     if len(sys.argv) < 4:
         print("-- Not enough arguments were given, arguments are:")
-        print("--   measure  Measure to visualize (emd, iter, unsat, dist).")
+        print("--   measure  Measure to visualize (emd, iter, unsat, s_dist, d_dist, r_dist).")
         print("--   size     Maximum terrain size to display.")
         print("--   code     Code appended to the results .json file to read.")
         print("--   ...      More codes, treated as separate data sets.")
@@ -167,4 +189,5 @@ if __name__ == '__main__':
         filenames = [getFiles(size, c) for c in sys.argv[3:]]
         colors = [codecolor.get(c, "black") for c in sys.argv[3:]]
 
-        plot(measure, filenames, colors)
+        # Only draw boxplots for EMD or iterations
+        plot(measure, filenames, colors, measure in ["emd", "iter"])

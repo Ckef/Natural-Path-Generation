@@ -44,69 +44,83 @@ def calcEMD(result):
     emd = []
     for s in range(0,result["samples"]):
         # Skip if no EMD info was recorded
-        if result["emds"][s] != None:
+        if result["emds_opt"][s] != None:
             emd.append(result["emds"][s] / result["emds_opt"][s])
 
     return emd
 
 
 #######################
-# Helper plotter to plot a scatter overlay
-def plotIndividuals(data, positions, color):
-    for i in range(0,len(data)):
-        x = np.random.normal(positions[i], 0.04, size=len(data[i]))
-        plt.scatter(x, data[i], 10, color, zorder=3, alpha=0.8)
-
 # Draws the plot
 # measure should tell us what to visualize
 # filenames is a list of lists, each item is a separate data set we want to plot
 # Colors are per dataset
 def plot(measure, filenames, colors):
-    # First read everything then call the appropriate plotters
+    # First read everything
     results = [[readResult(f) for f in files] for files in filenames]
 
+    # List of data sets, each data set containing a set of result files
+    # This gets filled below...
+    data = [[]]
+
+    #######################
+    # Fill in data for the EMD ratio
     if measure == "emd":
-        # Visualize the EMD ratio
-        # But first filter results without EMD info
-        # Only take the first data set, it's only calculable for one anyway...
-        data = list(filter(lambda r : len(r["emds_opt"]) > 0, results[0]))
-        emd = [calcEMD(r) for r in data]
-        #emd = [list(filter(None, r["emds"])) for r in data], # Actual EMD, instead of ratio
         plt.title("p-approximation")
 
-        plotIndividuals(emd, list(range(1,len(emd)+1)), colors[0])
+        # Some preliminary filtering of the results
+        # Make sure to skip any results without EMD info
+        # We can do this cause there are no gaps inbetween
+        # Also make sure to set results, so the x axis gets labeled correctly
+        results = [
+            list(filter(lambda r : len(r["emds_opt"]) > 0, d))
+            for d in results]
+
+        data = [[calcEMD(r) for r in d] for d in results]
+        # Actual EMD, instead of ratio
+        #data = [
+        #    [list(filter(None, r["emds"])) for r in d]
+        #    for d in results]
+
+    # Fill in data for iterations
+    if measure == "iter":
+        plt.title("# iterations")
+        plt.yscale("log")
+        data = [
+            # Make sure to skip any sample that reached maximum iterations
+            [list(filter(None, r["iterations"])) for r in d]
+            for d in results]
+
+    #######################
+    # A plot for each data set
+    num = len(data)
+    for d in range(0,num):
+        # Silent warning that there is no data
+        # We only do it here so there is a visual cue of something missing :)
+        if len(data[d]) == 0:
+            print("-- Data set #{} has no appropriate data.".format(d+1))
+            continue
+
+        # We position each plot with 0.8 space inbetween
+        pos = [i*num + (d-(num-1)/2)*0.8 for i in range(0,len(data[d]))]
+
+        # Boxplots
         plt.boxplot(
-            emd, showfliers=False,
-            labels=[label(r) for r in data],
-            medianprops={"linewidth":2.5, "color":colors[0]},
+            data[d], positions=pos, showfliers=False,
+            medianprops={"linewidth":2.5, "color":colors[d]},
             boxprops={"alpha":0.5},
             whiskerprops={"linestyle":"--", "alpha":0.5})
 
-    if measure == "iter":
-        # Visualize iterations
-        plt.title("# Iterations")
-        plt.yscale("log")
+        # The scatter plot overlays
+        for i in range(0,len(data[d])):
+            x = np.random.normal(pos[i], 0.04, size=len(data[d][i]))
+            plt.scatter(x, data[d][i], 10, colors[d], zorder=3, alpha=0.8)
 
-        # For each data set
-        num = len(results)
-        for d in range(0,num):
-            # Make sure to skip any sample that reached maximum iterations
-            # We position each plot with 0.8 space inbetween
-            data = [list(filter(None, r["iterations"])) for r in results[d]]
-            pos = [i*num + (d-(num-1)/2)*0.8 for i in range(0,len(results[d]))]
-
-            plotIndividuals(data, pos, colors[d])
-            plt.boxplot(
-                data, positions=pos, showfliers=False,
-                medianprops={"linewidth":2.5, "color":colors[d]},
-                boxprops={"alpha":0.5},
-                whiskerprops={"linestyle":"--", "alpha":0.5})
-
-        # Get the longest data set for the x-axis
-        longest = max(results, key=len)
-        plt.xticks(
-            [i*num for i in range(0,len(longest))],
-            [label(r) for r in longest])
+    # Get the longest data set for the x-axis
+    longest = max(results, key=len)
+    plt.xticks(
+        [i*num for i in range(0,len(longest))],
+        [label(r) for r in longest])
 
     # And get us a nice plot
     plt.grid(axis='y', linestyle=':')
@@ -118,7 +132,7 @@ def plot(measure, filenames, colors):
 if __name__ == '__main__':
     if len(sys.argv) < 4:
         print("-- Not enough arguments were given, arguments are:")
-        print("--   measure  Measure to visualize (emd, iter).")
+        print("--   measure  Measure to visualize (emd, iter, stats).")
         print("--   size     Maximum terrain size to display.")
         print("--   code     Code appended to the results .json file to read.")
         print("--   ...      More codes, treated as separate data sets.")

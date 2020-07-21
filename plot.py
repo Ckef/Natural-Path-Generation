@@ -35,16 +35,12 @@ def readResult(filename):
 
 
 #######################
-# Creates a label for a result
-def label(result):
-    return "{0}x{0}".format(result["size"])
-
 # Calculates the EMD ratios of a result
 def calcEMD(result):
     emd = []
     for s in range(0,result["samples"]):
         # Skip if no EMD info was recorded
-        if result["emds_opt"][s] != None:
+        if result["emds_opt"][s] != None and result["emds"][s] > 0:
             emd.append(result["emds"][s] / result["emds_opt"][s])
 
     return emd
@@ -52,8 +48,8 @@ def calcEMD(result):
 # Calculates the percentage of unsatisfied constraints of a result
 def calcUnsatisfied(result):
     return [
-        (stats["u_s"] + stats["u_d"] + stats["u_r"] + stats["u_p"])/
-        (stats["n_s"] + stats["n_d"] + stats["n_r"] + stats["n_p"])
+        ((stats["u_s"] + stats["u_d"] + stats["u_r"] + stats["u_p"])/
+        (stats["n_s"] + stats["n_d"] + stats["n_r"] + stats["n_p"])) * 100
         for stats in result["stats_H"]]
 
 # Calculates the average distance of constraints to their goal
@@ -66,8 +62,8 @@ def calcDistance(code, result):
     for s in range(0,result["samples"]):
         # Skip if it reached a solution
         # TODO: If we plot all, we can see this distance is not greater
-        # than the satisfied constraints, do we plot those too?
-        if result["iterations"][s] == None:
+        # than that of the satisfied constraints, do we plot those too?
+        #if result["iterations"][s] == None:
             dist.append(result["stats_H"][s]["d_"+code])
 
     return dist
@@ -158,7 +154,7 @@ def plot(measure, filenames, colors, box):
     longest = max(results, key=len)
     plt.xticks(
         [i*num for i in range(0,len(longest))],
-        [label(r) for r in longest])
+        ["{0}x{0}".format(r["size"]) for r in longest])
 
     # And get us a nice plot
     plt.grid(axis='y', linestyle=':')
@@ -179,8 +175,14 @@ if __name__ == '__main__':
         codecolor = {
             "deriv" : "gold",
             "rough" : "limegreen",
-            "deriv_border" : "orange",
-            "rough_border" : "darkgreen"
+            "deriv_border" : "darkorange",
+            "rough_border" : "darkgreen",
+            "deriv_maxslope0005" : "mediumturquoise",
+            "deriv_maxslope0095" : "orangered",
+            "deriv_thresh000001" : "mediumturquoise",
+            "deriv_thresh0001" : "orangered",
+            "deriv_thresh001" : "firebrick",
+            "deriv_thresh01" : "maroon"
         }
 
         # Get all arguments

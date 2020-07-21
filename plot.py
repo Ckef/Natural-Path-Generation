@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import matplotlib.pyplot as plt
+import numpy as np
 import os
 import sys
 
@@ -26,11 +27,11 @@ def getFiles(size, code):
     return files
 
 # Reads a result file
-def readResults(filename):
+def readResult(filename):
     f = open(filename)
-    results = json.loads(f.read())
+    result = json.loads(f.read())
     f.close()
-    return results
+    return result
 
 
 #######################
@@ -50,51 +51,64 @@ def calcEMD(result):
 
 
 #######################
+# Helper plotter to plot a scatter overlay
+def plotIndividuals(data, positions, color):
+    for i in range(0,len(data)):
+        x = np.random.normal(positions[i], 0.04, size=len(data[i]))
+        plt.scatter(x, data[i], 10, color, zorder=3, alpha=0.8)
+
 # Draws the plot
 # measure should tell us what to visualize
 # filenames is a list of lists, each item is a separate data set we want to plot
 # Colors are per dataset
 def plot(measure, filenames, colors):
     # First read everything then call the appropriate plotters
-    results = [[readResults(f) for f in files] for files in filenames]
+    results = [[readResult(f) for f in files] for files in filenames]
 
     if measure == "emd":
         # Visualize the EMD ratio
         # But first filter results without EMD info
         # Only take the first data set, it's only calculable for one anyway...
         data = list(filter(lambda r : len(r["emds_opt"]) > 0, results[0]))
-
+        emd = [calcEMD(r) for r in data]
+        #emd = [list(filter(None, r["emds"])) for r in data], # Actual EMD, instead of ratio
         plt.title("p-approximation")
+
+        plotIndividuals(emd, list(range(1,len(emd)+1)), colors[0])
         plt.boxplot(
-            [calcEMD(r) for r in data],
-            #[list(filter(None, r["emds"])) for r in data], # Actual EMD, instead of ratio
+            emd, showfliers=False,
             labels=[label(r) for r in data],
-            medianprops={"linewidth":2.5})
+            medianprops={"linewidth":2.5, "color":colors[0]},
+            boxprops={"alpha":0.5},
+            whiskerprops={"linestyle":"--", "alpha":0.5})
 
     if measure == "iter":
         # Visualize iterations
-        # Get the longest data set for the x-axis
-        longest = max(results, key=len)
-        num = len(results)
-
         plt.title("# Iterations")
         plt.yscale("log")
-        bplots = []
-        for d in range(0,num):
-            bplots.append(plt.boxplot(
-                # Make sure to skip any sample that reached maximum iterations
-                # We position each plot with 0.8 space inbetween
-                [list(filter(None, r["iterations"])) for r in results[d]],
-                positions=[i*num + (d-(num-1)/2)*0.8 for i in range(0,len(results[d]))],
-                medianprops={"linewidth":2.5, "color":colors[d]}))
 
+        # For each data set
+        num = len(results)
+        for d in range(0,num):
+            # Make sure to skip any sample that reached maximum iterations
+            # We position each plot with 0.8 space inbetween
+            data = [list(filter(None, r["iterations"])) for r in results[d]]
+            pos = [i*num + (d-(num-1)/2)*0.8 for i in range(0,len(results[d]))]
+
+            plotIndividuals(data, pos, colors[d])
+            plt.boxplot(
+                data, positions=pos, showfliers=False,
+                medianprops={"linewidth":2.5, "color":colors[d]},
+                boxprops={"alpha":0.5},
+                whiskerprops={"linestyle":"--", "alpha":0.5})
+
+        # Get the longest data set for the x-axis
+        longest = max(results, key=len)
         plt.xticks(
             [i*num for i in range(0,len(longest))],
             [label(r) for r in longest])
-        #plt.legend(
-        #    [bplot["medians"][0] for bplot in bplots[:2]],
-        #    ["directional derivative", "roughness"])
 
+    # And get us a nice plot
     plt.grid(axis='y', linestyle=':')
     plt.show()
 
@@ -112,15 +126,15 @@ if __name__ == '__main__':
         # A color dictionary...
         codecolor = {
             "deriv" : "gold",
-            "rough" : "green",
-            "deriv_border" : "gold",
-            "rough_border" : "green"
+            "rough" : "limegreen",
+            "deriv_border" : "orange",
+            "rough_border" : "darkgreen"
         }
 
         # Get all arguments
         measure = sys.argv[1]
         size = int(sys.argv[2])
         filenames = [getFiles(size, c) for c in sys.argv[3:]]
-        colors = [codecolor.get(c, "orange") for c in sys.argv[3:]]
+        colors = [codecolor.get(c, "black") for c in sys.argv[3:]]
 
         plot(measure, filenames, colors)

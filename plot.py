@@ -49,6 +49,13 @@ def calcEMD(result):
 
     return emd
 
+# Calculates the percentage of unsatisfied constraints of a result
+def calcUnsatisfied(result):
+    return [
+        (stats["u_s"] + stats["u_d"] + stats["u_r"] + stats["u_p"])/
+        (stats["n_s"] + stats["n_d"] + stats["n_r"] + stats["n_p"])
+        for stats in result["stats_H"]]
+
 
 #######################
 # Draws the plot
@@ -91,6 +98,11 @@ def plot(measure, filenames, colors):
             [list(filter(None, r["iterations"])) for r in d]
             for d in results]
 
+    # Fill in data for percentage of unsatisfied constraints
+    if measure == "unsat":
+        plt.title("% unsatisfied constraints")
+        data = [[calcUnsatisfied(r) for r in d] for d in results]
+
     #######################
     # A plot for each data set
     num = len(data)
@@ -104,17 +116,21 @@ def plot(measure, filenames, colors):
         # We position each plot with 0.8 space inbetween
         pos = [i*num + (d-(num-1)/2)*0.8 for i in range(0,len(data[d]))]
 
-        # Boxplots
-        plt.boxplot(
-            data[d], positions=pos, showfliers=False,
-            medianprops={"linewidth":2.5, "color":colors[d]},
-            boxprops={"alpha":0.5},
-            whiskerprops={"linestyle":"--", "alpha":0.5})
+        if measure != "unsat":
+            # Boxplots
+            plt.boxplot(
+                data[d], positions=pos, showfliers=False, zorder=1,
+                medianprops={"linewidth":2.5, "color":colors[d]},
+                boxprops={"alpha":0.5},
+                whiskerprops={"linestyle":"--", "alpha":0.5})
 
         # The scatter plot overlays
         for i in range(0,len(data[d])):
-            x = np.random.normal(pos[i], 0.04, size=len(data[d][i]))
-            plt.scatter(x, data[d][i], 10, colors[d], zorder=3, alpha=0.8)
+            if measure == "unsat":
+                plt.scatter([pos[i]]*len(data[d][i]), data[d][i], 20, colors[d])
+            else:
+                x = np.random.normal(pos[i], 0.04, size=len(data[d][i]))
+                plt.scatter(x, data[d][i], 10, colors[d], alpha=0.7, zorder=2)
 
     # Get the longest data set for the x-axis
     longest = max(results, key=len)
@@ -132,7 +148,7 @@ def plot(measure, filenames, colors):
 if __name__ == '__main__':
     if len(sys.argv) < 4:
         print("-- Not enough arguments were given, arguments are:")
-        print("--   measure  Measure to visualize (emd, iter, stats).")
+        print("--   measure  Measure to visualize (emd, iter, unsat, dist).")
         print("--   size     Maximum terrain size to display.")
         print("--   code     Code appended to the results .json file to read.")
         print("--   ...      More codes, treated as separate data sets.")

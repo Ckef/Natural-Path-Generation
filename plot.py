@@ -106,6 +106,7 @@ def plot(measure, filenames, colors, box):
     if measure == "iter":
         plt.title("# iterations")
         plt.yscale("log")
+        plt.ylim(top=100000)
         data = [
             # Make sure to skip any sample that reached maximum iterations
             [list(filter(None, r["iterations"])) for r in d]
@@ -150,6 +151,15 @@ def plot(measure, filenames, colors, box):
                 x = np.random.normal(pos[i], 0.04, size=len(data[d][i]))
                 plt.scatter(x, data[d][i], 10, colors[d], alpha=0.7, zorder=2)
 
+        # And a plot through the averages
+        # Filter out cases where there are no data points
+        # e.g. when they're filtered out cause the iterative method did nothing
+        # i.e. EMD(L,H) = 0
+        plt.plot(
+            [i*num for i in range(0,len(data[d]))],
+            [None if len(r) == 0 else sum(r) / len(r) for r in data[d]],
+            '--', c=colors[d], alpha=0.5, zorder=3)
+
     # Get the longest data set for the x-axis
     longest = max(results, key=len)
     plt.xticks(
@@ -157,7 +167,7 @@ def plot(measure, filenames, colors, box):
         ["{0}x{0}".format(r["size"]) for r in longest])
 
     # And get us a nice plot
-    plt.grid(axis='y', linestyle=':')
+    plt.grid(axis='both', linestyle=':')
     plt.show()
 
 
@@ -180,9 +190,8 @@ if __name__ == '__main__':
             "deriv_maxslope0005" : "mediumturquoise",
             "deriv_maxslope0095" : "orangered",
             "deriv_thresh000001" : "mediumturquoise",
-            "deriv_thresh0001" : "orangered",
-            "deriv_thresh001" : "firebrick",
-            "deriv_thresh01" : "maroon"
+            "deriv_thresh001" : "orangered",
+            "deriv_thresh01" : "firebrick"
         }
 
         # Get all arguments
@@ -192,4 +201,5 @@ if __name__ == '__main__':
         colors = [codecolor.get(c, "black") for c in sys.argv[3:]]
 
         # Only draw boxplots for EMD or iterations
+        plt.figure(figsize=(6,3))
         plot(measure, filenames, colors, measure in ["emd", "iter"])

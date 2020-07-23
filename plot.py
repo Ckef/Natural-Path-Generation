@@ -86,7 +86,7 @@ def plot(measure, filenames, colors, box):
     #######################
     # Fill in data for the EMD ratio
     if measure == "emd":
-        plt.title("p-approximation")
+        plt.title("$\\rho$-approximation")
 
         # Some preliminary filtering of the results
         # Make sure to skip any results without EMD info
@@ -103,10 +103,14 @@ def plot(measure, filenames, colors, box):
         #    for d in results]
 
     # Fill in data for iterations
-    if measure == "iter":
+    if measure == "iter" or measure == "iter_lin":
         plt.title("# iterations")
-        plt.yscale("log")
-        plt.ylim(top=100000)
+        if measure == "iter":
+            plt.yscale("log")
+            plt.ylim(top=100000)
+        else:
+            plt.xlim(left=0)
+
         data = [
             # Make sure to skip any sample that reached maximum iterations
             [list(filter(None, r["iterations"])) for r in d]
@@ -124,7 +128,11 @@ def plot(measure, filenames, colors, box):
 
     #######################
     # A plot for each data set
+    # Get the longest data set for the x-axis
+    longest = max(results, key=len)
     num = len(data)
+    pos = []
+
     for d in range(0,num):
         # Silent warning that there is no data
         # We only do it here so there is a visual cue of something missing :)
@@ -133,7 +141,11 @@ def plot(measure, filenames, colors, box):
             continue
 
         # We position each plot with 0.8 space inbetween
-        pos = [i*num + (d-(num-1)/2)*0.8 for i in range(0,len(data[d]))]
+        if measure == "iter_lin":
+            # Yeah whatever don't space them in this mode
+            pos = [longest[i]["size"]**2 for i in range(0,len(data[d]))]
+        else:
+            pos = [i*num + (d-(num-1)/2)*0.8 for i in range(0,len(data[d]))]
 
         if box:
             # Boxplots
@@ -155,16 +167,27 @@ def plot(measure, filenames, colors, box):
         # Filter out cases where there are no data points
         # e.g. when they're filtered out cause the iterative method did nothing
         # i.e. EMD(L,H) = 0
-        plt.plot(
-            [i*num for i in range(0,len(data[d]))],
-            [None if len(r) == 0 else sum(r) / len(r) for r in data[d]],
-            '--', c=colors[d], alpha=0.5, zorder=3)
+        linew = None
+        if measure != "iter_lin":
+            pos = [i*num for i in range(0,len(data[d]))]
+        else:
+            linew = 5
 
-    # Get the longest data set for the x-axis
-    longest = max(results, key=len)
-    plt.xticks(
-        [i*num for i in range(0,len(longest))],
-        ["{0}x{0}".format(r["size"]) for r in longest])
+        plt.plot(
+            pos,
+            [None if len(r) == 0 else sum(r) / len(r) for r in data[d]],
+            '--', linewidth=linew, c=colors[d], alpha=0.5, zorder=3)
+
+    # The x-axis
+    if measure == "iter_lin":
+        plt.xticks(
+            [longest[i]["size"]**2 for i in range(0,len(longest))],
+            # Kinda random but I'm assuming 257 here, so 65 is the first readable
+            [r["size"]**2 if r["size"] >= 65 else "" for r in longest])
+    else:
+        plt.xticks(
+            [i*num for i in range(0,len(longest))],
+            ["{0}x{0}".format(r["size"]) for r in longest])
 
     # And get us a nice plot
     plt.grid(axis='both', linestyle=':')
@@ -176,7 +199,7 @@ def plot(measure, filenames, colors, box):
 if __name__ == '__main__':
     if len(sys.argv) < 4:
         print("-- Not enough arguments were given, arguments are:")
-        print("--   measure  Measure to visualize (emd, iter, unsat, s_dist, d_dist, r_dist).")
+        print("--   measure  Measure to visualize (emd, iter, iter_lin, unsat, s_dist, d_dist, r_dist).")
         print("--   size     Maximum terrain size to display.")
         print("--   code     Code appended to the results .json file to read.")
         print("--   ...      More codes, treated as separate data sets.")

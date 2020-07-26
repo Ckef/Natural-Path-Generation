@@ -75,7 +75,7 @@ def calcDistance(code, result):
 # filenames is a list of lists, each item is a separate data set we want to plot
 # Colors are per dataset
 # If box is true, boxplots shall be drawn
-def plot(measure, filenames, colors, box):
+def plot(measure, filenames, colors, labels, box):
     # First read everything
     results = [[readResult(f) for f in files] for files in filenames]
 
@@ -107,7 +107,7 @@ def plot(measure, filenames, colors, box):
         plt.title("# iterations")
         if measure == "iter":
             plt.yscale("log")
-            plt.ylim(top=100000)
+            #plt.ylim(top=100000)
         else:
             plt.xlim(left=0)
 
@@ -147,8 +147,8 @@ def plot(measure, filenames, colors, box):
         else:
             pos = [i*num + (d-(num-1)/2)*0.8 for i in range(0,len(data[d]))]
 
+        # Boxplots
         if box:
-            # Boxplots
             plt.boxplot(
                 data[d], positions=pos, showfliers=False, zorder=1,
                 medianprops={"linewidth":2.5, "color":colors[d]},
@@ -164,19 +164,20 @@ def plot(measure, filenames, colors, box):
                 plt.scatter(x, data[d][i], 10, colors[d], alpha=0.7, zorder=2)
 
         # And a plot through the averages
-        # Filter out cases where there are no data points
-        # e.g. when they're filtered out cause the iterative method did nothing
-        # i.e. EMD(L,H) = 0
         linew = None
         if measure != "iter_lin":
             pos = [i*num for i in range(0,len(data[d]))]
         else:
             linew = 5
 
-        plt.plot(
-            pos,
-            [None if len(r) == 0 else sum(r) / len(r) for r in data[d]],
-            '--', linewidth=linew, c=colors[d], alpha=0.5, zorder=3)
+        # Filter out cases where there are no data points
+        # e.g. when they're filtered out cause the iterative method did nothing
+        # i.e. EMD(L,H) = 0
+        avgs = [None if len(r) == 0 else sum(r) / len(r) for r in data[d]]
+        plt.plot(pos, avgs, '--', linewidth=linew, c=colors[d], alpha=0.5, zorder=3)
+        # Also print averages
+        print("-- Data set {}:".format(d))
+        print(avgs)
 
     # The x-axis
     if measure == "iter_lin":
@@ -191,6 +192,9 @@ def plot(measure, filenames, colors, box):
 
     # And get us a nice plot
     plt.grid(axis='both', linestyle=':')
+    if labels != None:
+        plt.legend(labels, loc="upper left")
+
     plt.show()
 
 
@@ -217,6 +221,10 @@ if __name__ == '__main__':
             "deriv_thresh01" : "firebrick"
         }
 
+        # Labels, they're hardcoded but good enough
+        # Just edit this script if we want a legend
+        labels = ["$g(j) = 0.0005$", "$g(j) = 0.0035$", "$g(j) = 0.0095$"]
+
         # Get all arguments
         measure = sys.argv[1]
         size = int(sys.argv[2])
@@ -224,5 +232,5 @@ if __name__ == '__main__':
         colors = [codecolor.get(c, "black") for c in sys.argv[3:]]
 
         # Only draw boxplots for EMD or iterations
-        plt.figure(figsize=(6,3))
-        plot(measure, filenames, colors, measure in ["emd", "iter"])
+        plt.figure(figsize=(8,3))
+        plot(measure, filenames, colors, labels, measure in ["emd", "iter"])

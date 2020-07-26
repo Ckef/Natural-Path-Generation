@@ -165,6 +165,8 @@ def plot(measure, filenames, colors, labels, box):
 
         # And a plot through the averages
         linew = None
+        lab = None if len(labels) <= d else labels[d]
+
         if measure != "iter_lin":
             pos = [i*num for i in range(0,len(data[d]))]
         else:
@@ -174,7 +176,7 @@ def plot(measure, filenames, colors, labels, box):
         # e.g. when they're filtered out cause the iterative method did nothing
         # i.e. EMD(L,H) = 0
         avgs = [None if len(r) == 0 else sum(r) / len(r) for r in data[d]]
-        plt.plot(pos, avgs, '--', linewidth=linew, c=colors[d], alpha=0.5, zorder=3)
+        plt.plot(pos, avgs, '--', linewidth=linew, c=colors[d], alpha=0.5, label=lab, zorder=3)
         # Also print averages
         print("-- Data set {}:".format(d))
         print(avgs)
@@ -193,7 +195,7 @@ def plot(measure, filenames, colors, labels, box):
     # And get us a nice plot
     plt.grid(axis='both', linestyle=':')
     if labels != None:
-        plt.legend(labels, loc="upper left")
+        plt.legend(loc="upper left")
 
     plt.show()
 

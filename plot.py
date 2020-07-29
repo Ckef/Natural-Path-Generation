@@ -107,7 +107,7 @@ def plot(measure, filenames, colors, labels, box):
         plt.title("# iterations")
         if measure == "iter":
             plt.yscale("log")
-            #plt.ylim(top=100000)
+            plt.ylim(top=100000)
         else:
             plt.xlim(left=0)
 
@@ -225,7 +225,7 @@ if __name__ == '__main__':
 
         # Labels, they're hardcoded but good enough
         # Just edit this script if we want a legend
-        labels = ["$g(j) = 0.0005$", "$g(j) = 0.0035$", "$g(j) = 0.0095$"]
+        labels = ["1", "2", "3", "4"]
 
         # Get all arguments
         measure = sys.argv[1]

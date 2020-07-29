@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 /* Window dimensions */
-#define WINDOW_WIDTH   800
+#define WINDOW_WIDTH   1200 /* 1200 normal, 800 for screenshots */
 #define WINDOW_HEIGHT  600
 
 /* Scene to forward input callbacks to */

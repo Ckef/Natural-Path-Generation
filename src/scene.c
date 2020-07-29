@@ -343,7 +343,10 @@ int scene_add_patch(Scene* scene)
 	}
 
 	/* Now place the main patch */
-	return add_patch(scene, gen_mpd, mods, outs);
+	if(scene->patch_mode == READ_FILE)
+		return add_patch(scene, gen_file, NULL, NULL);
+	else
+		return add_patch(scene, gen_mpd, mods, outs);
 }
 
 /*****************************/

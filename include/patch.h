@@ -7,6 +7,7 @@
 /* Calculation mode */
 typedef enum
 {
+	READ_FILE,
 	SEQUENTIAL,
 	PARALLEL,
 	GPU /* TODO: Not yet operational */

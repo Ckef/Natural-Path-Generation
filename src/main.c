@@ -80,11 +80,12 @@ int main(int argc, char* argv[])
 
 	/* Create a scene, check if input was given */
 	/* - First argument is a number for the grid size */
-	/* - Second argument is the seed to use, must be > 0 */
-	/* - Third argument determines the mode */
+	/* - Second argument determines the mode */
+	/*    f = read from file */
 	/*    s = sequential */
 	/*    p = parallel */
 	/*    g = gpu (parallel) */
+	/* - Third argument is the seed to use, must be > 0 */
 	/* - Fourth argument sets the program to automatic (any value sets it) */
 	Scene scene;
 	unsigned int pSize = 0;
@@ -93,13 +94,14 @@ int main(int argc, char* argv[])
 
 	if(argc > 1)
 		pSize = atoi(argv[1]);
-	if(argc > 2)
-		srand(atoi(argv[2]));
-	if(argc > 3) mode =
-		argv[3][0] == 's' ? SEQUENTIAL :
-		argv[3][0] == 'p' ? PARALLEL :
-		argv[3][0] == 'g' ? GPU :
+	if(argc > 2) mode =
+		argv[2][0] == 'f' ? READ_FILE :
+		argv[2][0] == 's' ? SEQUENTIAL :
+		argv[2][0] == 'p' ? PARALLEL :
+		argv[2][0] == 'g' ? GPU :
 		mode;
+	if(argc > 3)
+		srand(atoi(argv[3]));
 	if(argc > 4)
 		aut = 1;
 

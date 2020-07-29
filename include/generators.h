@@ -15,5 +15,10 @@ int gen_white_noise(unsigned int size, Vertex* data);
  */
 int gen_mpd(unsigned int size, Vertex* data);
 
+/**
+ * Generator that reads terrain from file.
+ */
+int gen_file(unsigned int size, Vertex* data);
+
 
 #endif

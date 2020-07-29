@@ -19,7 +19,7 @@ help:
 	@echo "~~~~~~~~~~~~~~~~~~~"
 	@echo "make clean      Clean temporary files."
 	@echo "make terr       Build the program."
-	@echo "./terr <resolution> <seed> <mode> <auto>"
+	@echo "./terr <resolution> <mode> <seed> <auto>"
 
 
 ###############################
@@ -70,6 +70,7 @@ HEADERS = \
 
 OBJS = \
  $(OUT)/glad.o \
+ $(OUT)/generators/input.o \
  $(OUT)/generators/mpd.o \
  $(OUT)/generators/noise.o \
  $(OUT)/modifiers/flatten.o \

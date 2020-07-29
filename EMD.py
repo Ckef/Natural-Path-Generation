@@ -24,15 +24,11 @@ def readTerrain(filename):
     return terr
 
 # Writes a terrain from list
-def writeTerrain(filename, data, size):
-    # First make it into a 2D list again
-    terr = [[0] * size] * size
-    for c in range(0,size):
-        for r in range(0,size):
-            terr[c][r] = data[c*size+r]
-
+def writeTerrain(filename, data):
+    # We don't care about making it a 2D list
+    # We can read it like this in our C program, it don't care
     f = open(filename, 'w')
-    f.write(json.dumps(terr))
+    f.write(json.dumps(data))
     f.close()
 
 
@@ -322,7 +318,7 @@ def EMD(pathGen):
         # Also write solution to file
         f.write("{}\n".format(Cost))
         if pathGen:
-            writeTerrain(H_OPT_FILE, m.getAttr('x', H).values(), size)
+            writeTerrain(H_OPT_FILE, m.getAttr('x', H).values())
 
     else:
         # Write a skip to file

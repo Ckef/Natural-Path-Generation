@@ -11,6 +11,7 @@
 #define OUT_FILE_ITERS    "iter_out.txt"
 #define OUT_FILE_STATS_L  "stats_out_l.txt"
 #define OUT_FILE_STATS_H  "stats_out_h.txt"
+#define IN_FILE_H_OPT     "terrain_out_h_opt.json"
 
 
 /*****************************/

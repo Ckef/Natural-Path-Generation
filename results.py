@@ -54,7 +54,7 @@ def results(size, emd, opt, Ns, filecode):
     for i in range(0,Ns):
         # Run the iterative relaxation algorithm
         # This gives us all the terrain .json files and the iterations and stats .txt
-        run("./terr {} {} s 1".format(size, i+1), i+1)
+        run("./terr {} s {} 1".format(size, i+1), i+1)
         if emd:
             # Calculate the EMD of the above to the EMD .txt
             run("./EMD.py", i+1)
